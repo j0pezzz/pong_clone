@@ -1,26 +1,35 @@
-using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 public class GameController : MonoBehaviour
 {
+    #region Public Members
+    public GameObject PlayerController;
+    public GameObject BallPrefab;
+
     public float TopBound = 4f;
     public float BottomBound = -4f;
+
+    public Color WinnerColor = Color.yellow;
+    public Color LoserColor = Color.red;
+    #endregion
+
+    #region Public Properties
     public bool IsGameDone { get; set; } = false;
     public bool IsGamePaused { get; set; } = false;
 
     public int Player1Points { get; private set; } = 0;
     public int Player2Points { get; private set; } = 0;
-    public int MaxPoint { get; private set; } = 5;
+    public static int GameRequiredPoints { get; private set; } = 5;
+    #endregion
 
-    public GameObject PlayerController;
-    public GameObject BallPrefab;
-
-    protected GameMode CurrentGameMode;
+    #region Private Members
+    GameMode CurrentGameMode;
 
     PlayerControlller cacheP1;
     PlayerControlller cacheP2;
     Ball cacheBall;
+    #endregion
 
     void Awake()
     {
@@ -51,9 +60,10 @@ public class GameController : MonoBehaviour
         }
     }
 
-    public void StartGame(GameMode mode)
+    public void StartGame(GameMode mode, int maxPoint)
     {
         CurrentGameMode = mode;
+        GameRequiredPoints = maxPoint;
         SceneManager.LoadScene("Game");
     }
 
@@ -105,7 +115,20 @@ public class GameController : MonoBehaviour
                 break;
         }
 
-        ScoreUI.Instance.UpdateScores(Player1Points, Player2Points);
+        GameUI.Instance.ScoreUI.UpdateScores(Player1Points, Player2Points);
+
+        if (Player1Points >= GameRequiredPoints)
+        {
+            GameUI.Instance.GameFinish.ShowFinish("Player 1", "Player 2", Player1Points, Player2Points);
+            IsGameDone = true;
+            bl_EventHandler.DispatchGameFinish();
+        }
+        else if (Player2Points >= GameRequiredPoints)
+        {
+            GameUI.Instance.GameFinish.ShowFinish("Player 2", "Player 1", Player2Points, Player1Points);
+            IsGameDone = true;
+            bl_EventHandler.DispatchGameFinish();
+        }
     }
 
     static GameController _instance;

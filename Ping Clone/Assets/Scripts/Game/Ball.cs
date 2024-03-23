@@ -15,7 +15,10 @@ public class Ball : MonoBehaviour
         initPos = transform.position;
         LaunchBall();
         bl_EventHandler.onPauseCall += OnGamePaused;
+        bl_EventHandler.onGameFinish += GameFinished;
     }
+
+    void GameFinished() => rb.velocity = Vector3.zero;
 
     void OnGamePaused(bool paused)
     {
