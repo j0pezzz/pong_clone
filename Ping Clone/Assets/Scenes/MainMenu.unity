@@ -649,6 +649,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1240527946}
+  - component: {fileID: 1240527947}
   m_Layer: 0
   m_Name: Game Controller
   m_TagString: GameController
@@ -671,6 +672,22 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1240527947
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1240527945}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: afa82afde71a9dc4787cf4389fe0cf7f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  TopBound: 2.88
+  BottomBound: -2.88
+  PlayerController: {fileID: 4994095831586146826, guid: 0247464f2b5ea7a4caeb3ebf91c688f7, type: 3}
+  BallPrefab: {fileID: 3289682257769920795, guid: a4d6425e3e164d649824b8c679dad10c, type: 3}
 --- !u!1 &1701412396
 GameObject:
   m_ObjectHideFlags: 0
