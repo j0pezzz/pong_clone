@@ -2169,7 +2169,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &972911066
 RectTransform:
   m_ObjectHideFlags: 0
@@ -3392,6 +3392,7 @@ MonoBehaviour:
   BottomBound: -2.88
   WinnerColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   LoserColor: {r: 1, g: 0, b: 0, a: 1}
+  CurrentGameMode: 0
   cacheBall: {fileID: 0}
 --- !u!1 &1254405871
 GameObject:
