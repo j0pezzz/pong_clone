@@ -8,7 +8,7 @@ This is a simple clone of the classic Pong game. The game is developed in Unity 
 - Ball physics: The ball bounces off the paddles and the top and bottom of the screen.
 - Scoring system: Keep track of your score and the other player's score.
 - Local multiplayer: Play against a friend on the same device.
-- AI opponent (coming soon): Play against a computer-controlled opponent.
+- AI opponent: Play against a computer-controlled opponent.
 
 ## Controls
 - Player 1: Use the W (up) and S (down) keys to control your paddle.
