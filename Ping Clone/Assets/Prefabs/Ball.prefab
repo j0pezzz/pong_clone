@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 3999903940395836109}
   m_Layer: 0
   m_Name: Ball
-  m_TagString: Untagged
+  m_TagString: Ball
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -49,6 +49,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Speed: 5
   rb: {fileID: 3370194145226746745}
+  mapPrefabs: {fileID: 0}
 --- !u!54 &3370194145226746745
 Rigidbody:
   m_ObjectHideFlags: 0

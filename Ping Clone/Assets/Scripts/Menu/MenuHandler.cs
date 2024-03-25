@@ -6,17 +6,30 @@ public class MenuHandler : MonoBehaviour
 {
     [SerializeField] GameObject MatchSettings;
     [SerializeField] TMP_Dropdown maxPointDropdown;
+    [SerializeField] TMP_Dropdown aiDifficulty;
+
+    GameMode cacheGameMode;
 
     public void ShowMatchSettings(bool active)
     {
         MatchSettings.SetActive(active);
+
+        if (cacheGameMode == GameMode.PvP)
+        {
+            aiDifficulty.gameObject.SetActive(!active);
+        }
+        else
+        {
+            aiDifficulty.gameObject.SetActive(active);
+        }
     }
 
-    public void PlayGame(string gameMode)
+    public void SetGameMode(string gameMode) => cacheGameMode = (GameMode)Enum.Parse(typeof(GameMode), gameMode);
+
+    public void PlayGame()
     {
-        if (Enum.TryParse(typeof(GameMode), gameMode, out object mode))
-        {
-            GameController.Instance.StartGame((GameMode)mode, maxPointDropdown.value);
-        }
+        AIDifficulty difficulty = (AIDifficulty)aiDifficulty.value;
+        string points = maxPointDropdown.options[maxPointDropdown.value].text;
+        GameController.Instance.StartGame(cacheGameMode, points, difficulty);
     }
 }

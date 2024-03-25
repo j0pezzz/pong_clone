@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -5,6 +6,7 @@ public class GameController : MonoBehaviour
 {
     #region Public Members
     public GameObject PlayerController;
+    public GameObject AIPrefab;
     public GameObject BallPrefab;
 
     public float TopBound = 4f;
@@ -21,18 +23,27 @@ public class GameController : MonoBehaviour
     public int Player1Points { get; private set; } = 0;
     public int Player2Points { get; private set; } = 0;
     public static int GameRequiredPoints { get; private set; } = 5;
+    public static AIDifficulty AIDifficulty { get; private set; }
     #endregion
 
     #region Private Members
-    GameMode CurrentGameMode;
+    public GameMode CurrentGameMode;
 
-    PlayerControlller cacheP1;
-    PlayerControlller cacheP2;
-    Ball cacheBall;
+    Dictionary<int, PlayerControlller> playerControllers = new();
+    Dictionary<int, AIController> aiControllers = new();
+    [HideInInspector] public Ball cacheBall;
+
+    Vector3 spawnPoint;
     #endregion
 
     void Awake()
     {
+        Object[] gameControllers = FindObjectsByType(typeof(GameController), FindObjectsSortMode.None);
+        if (gameControllers.Length > 1)
+        {
+            Destroy(gameControllers[1]);
+        }
+
         DontDestroyOnLoad(gameObject);
         Instance = this;
 
@@ -55,41 +66,100 @@ public class GameController : MonoBehaviour
     {
         if (loadedScene.name == "Game")
         {
-            SpawnPlayer();
             SpawnBall();
+
+            if (CurrentGameMode == GameMode.PvP)
+            {
+                SpawnPlayers();
+            }
+            else if (CurrentGameMode == GameMode.PvE)
+            {
+                SpawnPlayers(1);
+                SpawnAI();
+            }
+            else if (CurrentGameMode == GameMode.EvE)
+            {
+                SpawnAI(2);
+            }
         }
     }
 
-    public void StartGame(GameMode mode, int maxPoint)
+    public void StartGame(GameMode mode, string maxPoint, AIDifficulty difficulty)
     {
         CurrentGameMode = mode;
-        GameRequiredPoints = maxPoint;
+        int.TryParse(maxPoint, out int points);
+        GameRequiredPoints = points;
+        AIDifficulty = difficulty;
         SceneManager.LoadScene("Game");
     }
 
     public void ResetGame()
     {
-        cacheP1.SetPlayerToInitPosition();
-        cacheP2.SetPlayerToInitPosition();
+        foreach (PlayerControlller controller in playerControllers.Values)
+        {
+            controller.SetPlayerToInitPosition();
+        }
+
+        foreach (AIController aiController in aiControllers.Values)
+        {
+            aiController.SetToInit();
+        }
+
         cacheBall.SetBallToInit();
     }
 
-    void SpawnPlayer()
+    void SpawnPlayers(int amount = 2)
     {
-        GameObject playerObject = Instantiate(PlayerController, SpawnPointManager.Instance.SpawnPoint1, Quaternion.identity);
-        playerObject.name = "Player 1";
-        playerObject.tag = "Paddle1";
-        if (playerObject.TryGetComponent(out cacheP1))
+        for (int i = 0; i < amount; i++)
         {
-            cacheP1.PlayerRef = 1;
-        }
+            spawnPoint = i == 0 ? SpawnPointManager.Instance.SpawnPoint1 : SpawnPointManager.Instance.SpawnPoint2;
 
-        GameObject playerObject2 = Instantiate(PlayerController, SpawnPointManager.Instance.SpawnPoint2, Quaternion.identity);
-        playerObject2.name = "Player 2";
-        playerObject2.tag = "Paddle2";
-        if (playerObject2.TryGetComponent(out cacheP2))
+            GameObject playerObject = Instantiate(PlayerController, spawnPoint, Quaternion.identity);
+            playerObject.name = $"Player{i + 1}";
+            playerObject.tag = $"Paddle{i + 1}";
+
+            if (playerObject.TryGetComponent(out PlayerControlller controller))
+            {
+                controller.PlayerRef = i + 1;
+                playerControllers.Add(i + 1, controller);
+            }
+        }
+    }
+
+    void SpawnAI(int amount = 1)
+    {
+        for (int i = 0; i < amount; i++)
         {
-            cacheP2.PlayerRef = 2;
+            Vector3 aiSpawnPoint;
+            if (amount == 1)
+            {
+                aiSpawnPoint = SpawnPointManager.Instance.SpawnPoint2;
+            }
+            else
+            {
+                aiSpawnPoint = i == 0 ? SpawnPointManager.Instance.SpawnPoint1 : SpawnPointManager.Instance.SpawnPoint2;
+            }
+
+            GameObject aiObject = Instantiate(AIPrefab, aiSpawnPoint, Quaternion.identity);
+            aiObject.name = $"AI {i + 1}";
+            aiObject.tag = $"Paddle{i + 1}";
+
+            if (!aiObject.TryGetComponent(out AIController aiController))
+            {
+                Debug.LogError("No AIController script attached to AI");
+            }
+
+            aiControllers.Add(i + 1, aiController);
+
+            if (aiSpawnPoint == SpawnPointManager.Instance.SpawnPoint2)
+            {
+                aiController.IsLeftSide = false;
+                aiObject.transform.Rotate(0, 180, 0);
+            }
+            else
+            {
+                aiController.IsLeftSide = true;
+            }
         }
     }
 

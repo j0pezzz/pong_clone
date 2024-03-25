@@ -4,21 +4,33 @@ public class Ball : MonoBehaviour
 {
     [Range(1, 20)] public float Speed = 5f;
     public Rigidbody rb;
+    public MapPrefabs mapPrefabs;
 
     Vector3 initPos;
     Vector3 pausedVelocity;
 
     float xDir, yDir;
 
+    GameObject paddle1, paddle2;
+    AIController paddleController1, paddleController2;
+
     void Awake()
     {
         initPos = transform.position;
+
         LaunchBall();
         bl_EventHandler.onPauseCall += OnGamePaused;
-        bl_EventHandler.onGameFinish += GameFinished;
     }
 
-    void GameFinished() => rb.velocity = Vector3.zero;
+    void Update()
+    {
+        if (GameController.Instance == null) return;
+
+        if (GameController.Instance.IsGameDone)
+        {
+            rb.velocity = Vector3.zero;
+        }
+    }
 
     void OnGamePaused(bool paused)
     {
@@ -55,6 +67,8 @@ public class Ball : MonoBehaviour
 
     void OnCollisionEnter(Collision collision)
     {
+        if (GameController.Instance != null && GameController.Instance.IsGameDone) return;
+
         if (collision.gameObject.CompareTag("Paddle1"))
         {
             float y = HitFactor(transform.position, collision.transform.position, collision.collider.bounds.size.y);
@@ -80,21 +94,30 @@ public class Ball : MonoBehaviour
 
     void OnTriggerEnter(Collider other)
     {
+        if (GameController.Instance != null && GameController.Instance.IsGameDone) return;
+
         bool enterP1Goal = other.gameObject.CompareTag("Player 1 Goal");
         bool enterP2Goal = other.gameObject.CompareTag("Player 2 Goal");
 
         if (enterP1Goal)
         {
+            //mapPrefabs.AI.OnBallMissed();
+
             GameController.Instance.AddScore("Player 2");
         }
 
         if (enterP2Goal)
         {
+            //mapPrefabs.AI.OnBallMissed();
+
             GameController.Instance.AddScore("Player 1");
         }
 
         if (enterP1Goal || enterP2Goal)
         {
+            //Note: Disable these when training.
+            SetBallToInit();
+
             GameController.Instance.ResetGame();
         }
 

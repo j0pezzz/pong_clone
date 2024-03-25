@@ -65,12 +65,12 @@ public class PlayerControlller : MonoBehaviour
     {
         if (Input.GetKey(KeyCode.W))
         {
-            float newY = Mathf.Clamp(transform.position.y + Speed * Time.deltaTime, GameController.Instance.BottomBound, GameController.Instance.TopBound);
+            float newY = Mathf.Clamp(m_Transform.position.y + Speed * Time.deltaTime, GameController.Instance.BottomBound, GameController.Instance.TopBound);
             m_Transform.position = new(m_Transform.position.x, newY, m_Transform.position.z);
         }
         if (Input.GetKey(KeyCode.S))
         {
-            float newY = Mathf.Clamp(transform.position.y + -Speed * Time.deltaTime, GameController.Instance.BottomBound, GameController.Instance.TopBound);
+            float newY = Mathf.Clamp(m_Transform.position.y + -Speed * Time.deltaTime, GameController.Instance.BottomBound, GameController.Instance.TopBound);
             m_Transform.position = new(m_Transform.position.x, newY, m_Transform.position.z);
         }
     }

@@ -8,11 +8,14 @@ TagManager:
   - Player 2 Goal
   - Paddle1
   - Paddle2
+  - AI
+  - Ball
+  - Bound
   layers:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - Ball
   - Water
   - UI
   - 
