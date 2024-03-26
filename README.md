@@ -1,7 +1,7 @@
 # Pong Clone Game
 
 ## Description
-This is a simple clone of the classic Pong game. The game is developed in Unity and it's a great way to learn about game development and Unity. Currently, the game supports two players for a local multiplayer experience. The next feature planned is an AI opponent for single-player mode.
+This is a simple clone of the classic Pong game. The game is developed in Unity and it's a great way to learn about game development and Unity. Currently, the game supports two players for a local multiplayer experience and versus AI. The next feature planned is an multiplayer mode where you can play against a friend without having to be on the same computer.
 
 ## Features
 - Classic Pong gameplay: Control your paddle and play against another player.
