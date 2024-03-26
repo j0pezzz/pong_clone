@@ -9,6 +9,7 @@ This is a simple clone of the classic Pong game. The game is developed in Unity 
 - Scoring system: Keep track of your score and the other player's score.
 - Local multiplayer: Play against a friend on the same device.
 - AI opponent: Play against a computer-controlled opponent.
+- Online Match (coming soon): Play against a friend.
 
 ## Controls
 - Player 1: Use the W (up) and S (down) keys to control your paddle.
