@@ -1,4 +1,8 @@
-using System.Collections.Generic;
+using Fusion;
+using Fusion.Sockets;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -8,12 +12,16 @@ public class GameController : MonoBehaviour
     public GameObject PlayerController;
     public GameObject AIPrefab;
     public GameObject BallPrefab;
+    public NetworkRunner RunnerPrefab;
 
     public float TopBound = 4f;
     public float BottomBound = -4f;
 
     public Color WinnerColor = Color.yellow;
     public Color LoserColor = Color.red;
+
+    [NonSerialized]
+    NetworkRunner _server;
     #endregion
 
     #region Public Properties
@@ -24,13 +32,14 @@ public class GameController : MonoBehaviour
     public int Player2Points { get; private set; } = 0;
     public static int GameRequiredPoints { get; private set; } = 5;
     public static AIDifficulty AIDifficulty { get; private set; }
+    public bool IsOnline { get; private set; }
     #endregion
 
     #region Private Members
     public GameMode CurrentGameMode;
 
-    Dictionary<int, PlayerControlller> playerControllers = new();
-    Dictionary<int, AIController> aiControllers = new();
+    System.Collections.Generic.Dictionary<int, PlayerControlller> playerControllers = new();
+    System.Collections.Generic.Dictionary<int, AIController> aiControllers = new();
     [HideInInspector] public Ball cacheBall;
 
     Vector3 spawnPoint;
@@ -38,7 +47,7 @@ public class GameController : MonoBehaviour
 
     void Awake()
     {
-        Object[] gameControllers = FindObjectsByType(typeof(GameController), FindObjectsSortMode.None);
+        UnityEngine.Object[] gameControllers = FindObjectsByType(typeof(GameController), FindObjectsSortMode.None);
         if (gameControllers.Length > 1)
         {
             Destroy(gameControllers[1]);
@@ -47,22 +56,118 @@ public class GameController : MonoBehaviour
         DontDestroyOnLoad(gameObject);
         Instance = this;
 
-        SceneManager.sceneLoaded += SceneManager_sceneLoaded;
-        bl_EventHandler.onPauseCall += OnGamePaused;
+        SceneManager.sceneLoaded += OnSceneLoaded;
+        bl_EventHandler.onPauseCall += OnPause;
+    }
+
+    public void StartRunner()
+    {
+        IsOnline = true;
+        RunnerPrefab = Instantiate(RunnerPrefab);
+        DontDestroyOnLoad(RunnerPrefab);
+        RunnerPrefab.name = "Temp Network Runner";
+    }
+
+    public System.Collections.IEnumerator HostRoom()
+    {
+        string sessionName = Guid.NewGuid().ToString();
+        Debug.LogWarning($"MenuHandler (HostRoom): generedted session name={sessionName}");
+
+        _server = Instantiate(RunnerPrefab);
+        _server.name = Fusion.GameMode.Host.ToString();
+
+        SceneRef sceneRef = SceneRef.FromIndex(SceneManager.GetSceneByName("Game").buildIndex);
+
+        Task serverTask = InitializeRunner(_server, Fusion.GameMode.Host, NetAddress.Any(), sceneRef, sessionName);
+
+        while (!serverTask.IsCompleted) yield return new WaitForSeconds(1);
+
+        if (serverTask.IsFaulted)
+        {
+            Debug.LogError($"GameController (HostRoom): {serverTask.Exception}");
+
+            ShutdownAll();
+            yield break;
+        }
+
+        yield return new WaitForEndOfFrame();
+    }
+
+    public System.Collections.IEnumerator JoinRoom(string sessionName)
+    {
+        yield return AddClient(Fusion.GameMode.Client, SceneRef.FromIndex(SceneManager.GetSceneByName("Game").buildIndex), sessionName);
+    }
+
+    Task AddClient(Fusion.GameMode mode, SceneRef scene, string sessionName)
+    {
+        NetworkRunner client = Instantiate(RunnerPrefab);
+        DontDestroyOnLoad(client);
+
+        client.name = $"Client {UnityEngine.Random.Range(1, 9999)}";
+
+        var clientTask = InitializeRunner(client, mode, NetAddress.Any(), scene, sessionName);
+
+        return clientTask;
+    }
+
+    protected virtual Task InitializeRunner(NetworkRunner runner, Fusion.GameMode gameMode, NetAddress address, SceneRef sceneRef, string sessionName)
+    {
+        runner.TryGetComponent(out INetworkSceneManager sceneManager);
+        if (sceneManager == null)
+        {
+            Debug.LogError($"NetworkRunner does not have any component implementing {nameof(INetworkSceneManager)}");
+            sceneManager = runner.gameObject.AddComponent<NetworkSceneManagerDefault>();
+        }
+
+        runner.TryGetComponent(out INetworkObjectProvider objectProvider);
+        if (objectProvider == null)
+        {
+            Debug.LogError($"NetworkRunner does not have any component implementing {nameof(INetworkObjectProvider)}");
+            objectProvider = runner.gameObject.AddComponent<NetworkObjectProviderDefault>();
+        }
+
+        NetworkSceneInfo sceneInfo = new();
+        if (sceneRef.IsValid)
+        {
+            sceneInfo.AddSceneRef(sceneRef, LoadSceneMode.Additive);
+        }
+
+        return runner.StartGame(new StartGameArgs
+        {
+            GameMode = gameMode,
+            Address = address,
+            Scene = sceneInfo,
+            SessionName = sessionName,
+            SceneManager = sceneManager,
+            ObjectProvider = objectProvider
+        });
+    }
+
+    void ShutdownAll()
+    {
+        foreach (NetworkRunner runner in NetworkRunner.Instances.ToList())
+        {
+            if (runner != null && runner.IsRunning)
+            {
+                runner.Shutdown();
+            }
+        }
+
+        Destroy(RunnerPrefab.gameObject);
     }
 
     void OnDestroy()
     {
-        SceneManager.sceneLoaded -= SceneManager_sceneLoaded;
-        bl_EventHandler.onPauseCall -= OnGamePaused;
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+        bl_EventHandler.onPauseCall -= OnPause;
     }
 
-    void OnGamePaused(bool paused)
+    void OnPause(bool paused)
     {
         IsGamePaused = paused;
     }
 
-    void SceneManager_sceneLoaded(Scene loadedScene, LoadSceneMode sceneLoadMode)
+    void OnSceneLoaded(Scene loadedScene, LoadSceneMode sceneLoadMode)
     {
         if (loadedScene.name == "Game")
         {
@@ -126,6 +231,10 @@ public class GameController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Spawns AI.
+    /// </summary>
+    /// <param name="amount">How many to spawn?</param>
     void SpawnAI(int amount = 1)
     {
         for (int i = 0; i < amount; i++)
