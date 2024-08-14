@@ -8,6 +8,7 @@ public class GameUI : MonoBehaviour
     public ScoreUI ScoreUI;
     [SerializeField] TextMeshProUGUI MaxScoreText;
     [SerializeField] GameObject WaitingForPlayersUI;
+    [SerializeField] TextMeshProUGUI SessionID;
 
     void Awake()
     {
@@ -24,8 +25,8 @@ public class GameUI : MonoBehaviour
 
     void WaitingForPlayers(bool waiting)
     {
+        SessionID.text = GameController.Instance.SessionInfo.Name;
         WaitingForPlayersUI.SetActive(waiting);
-        bl_EventHandler.DispatchPauseEvent(waiting);
     }
 
     static GameUI _instance;

@@ -14,6 +14,9 @@ public class MenuHandler : Fusion.Behaviour
     [SerializeField] GameObject JoinRoomContent;
     [SerializeField] TMP_InputField SessionName;
     [SerializeField] GameObject RoomCreationUI;
+    [SerializeField] GameObject JoiningRoomUI;
+    [SerializeField] GameObject NoRoomUI;
+    [SerializeField] TextMeshProUGUI ErrorMessage;
 
     GameMode cacheGameMode;
 
@@ -22,6 +25,8 @@ public class MenuHandler : Fusion.Behaviour
         bl_EventHandler.Network.Online += OnOnline;
         bl_EventHandler.Match.InMatch += InMatch;
         bl_EventHandler.Menu.CreatingRoom += RoomCreation;
+        bl_EventHandler.Menu.JoinRoom += JoiningRoom;
+        bl_EventHandler.Menu.NoRoom += NoRoomToJoin;
     }
 
     void OnDisable()
@@ -29,11 +34,24 @@ public class MenuHandler : Fusion.Behaviour
         bl_EventHandler.Network.Online -= OnOnline;
         bl_EventHandler.Match.InMatch -= InMatch;
         bl_EventHandler.Menu.CreatingRoom -= RoomCreation;
+        bl_EventHandler.Menu.JoinRoom -= JoiningRoom;
+        bl_EventHandler.Menu.NoRoom -= NoRoomToJoin;
     }
 
     void RoomCreation(bool creating)
     {
         RoomCreationUI.SetActive(creating);
+    }
+
+    void JoiningRoom(bool joining)
+    {
+        JoiningRoomUI.SetActive(joining);
+    }
+
+    void NoRoomToJoin(string message) 
+    { 
+        NoRoomUI.SetActive(true);
+        ErrorMessage.text = message;
     }
 
     void OnOnline()
@@ -77,7 +95,7 @@ public class MenuHandler : Fusion.Behaviour
         if (!GameController.Instance.IsOnline)
         {
             AIDifficulty difficulty = (AIDifficulty)aiDifficulty.value;
-            GameController.Instance.StartGame(cacheGameMode, points, difficulty);
+            GameController.Instance.StartGameOffline(cacheGameMode, points, difficulty);
         }
     }
 

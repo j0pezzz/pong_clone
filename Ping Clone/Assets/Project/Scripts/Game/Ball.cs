@@ -19,7 +19,7 @@ public class Ball : MonoBehaviour
         initPos = transform.position;
 
         LaunchBall();
-        bl_EventHandler.onPauseCall += OnGamePaused;
+        bl_EventHandler.Match.onPauseCall += OnGamePaused;
     }
 
     void Update()

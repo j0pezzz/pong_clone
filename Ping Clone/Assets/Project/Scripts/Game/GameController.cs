@@ -25,11 +25,12 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
 
     [NonSerialized]
     NetworkRunner _server;
+
+    public SessionInfo SessionInfo { get; private set; }
     #endregion
 
     #region Public Properties
     public bool IsGameDone { get; set; } = false;
-    public bool IsGamePaused { get; set; } = false;
 
     public int Player1Points { get; private set; } = 0;
     public int Player2Points { get; private set; } = 0;
@@ -41,11 +42,13 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
     #region Private Members
     public GameMode CurrentGameMode;
 
-    System.Collections.Generic.Dictionary<int, PlayerControlller> playerControllers = new();
-    System.Collections.Generic.Dictionary<int, AIController> aiControllers = new();
+    Dictionary<int, PlayerControlller> playerControllers = new();
+    Dictionary<int, AIController> aiControllers = new();
     [HideInInspector] public Ball cacheBall;
 
     Vector3 spawnPoint;
+
+    Dictionary<PlayerRef, NetworkObject> _spawnedPlayers = new();
     #endregion
 
     void Awake()
@@ -58,9 +61,11 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
 
         DontDestroyOnLoad(gameObject);
         Instance = this;
+    }
 
-        //SceneManager.sceneLoaded += OnSceneLoaded;
-        bl_EventHandler.onPauseCall += OnPause;
+    void OnDestroy()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
     public void StartRunner()
@@ -74,7 +79,7 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
 
     public System.Collections.IEnumerator HostRoom()
     {
-        string sessionName = Guid.NewGuid().ToString();
+        string sessionName = UnityEngine.Random.Range(0, 99999).ToString();
         Debug.LogWarning($"GameController (HostRoom): genereted session name={sessionName}");
 
         _server = Instantiate(RunnerPrefab);
@@ -86,7 +91,7 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
 
         bl_EventHandler.Menu.DispatchRoomCreate(true);
 
-        while (!serverTask.IsCompleted) yield return new WaitForSeconds(1);
+        while (!serverTask.IsCompleted) yield return null;
 
         if (serverTask.IsFaulted)
         {
@@ -98,31 +103,50 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
 
         bl_EventHandler.Menu.DispatchRoomCreate(false);
 
-        //_server.AddCallbacks(this);
-
         Debug.LogWarning($"GameController (HostRoom): NetworkRunner {_server.name} is initialized");
+
+        SessionInfo = _server.SessionInfo;
 
         yield return new WaitForEndOfFrame();
     }
 
     public System.Collections.IEnumerator JoinRoom(string sessionName)
     {
-        yield return AddClient(Fusion.GameMode.Client, SceneRef.FromIndex(SceneManager.GetSceneByName("Game").buildIndex), sessionName);
-    }
-
-    Task AddClient(Fusion.GameMode mode, SceneRef scene, string sessionName)
-    {
         NetworkRunner client = Instantiate(RunnerPrefab);
         DontDestroyOnLoad(client);
 
         client.name = $"Client {UnityEngine.Random.Range(1, 9999)}";
 
-        var clientTask = InitializeRunner(client, mode, NetAddress.Any(), scene, sessionName);
+        SceneRef sceneRef = SceneRef.FromIndex(SceneUtility.GetBuildIndexByScenePath(InitialScenePath));
 
-        return clientTask;
+        Task joinTask = InitializeRunner(client, Fusion.GameMode.Client, NetAddress.Any(), sceneRef, sessionName);
+
+        bl_EventHandler.Menu.DispatchRoomJoin(true);
+
+        while (!joinTask.IsCompleted) yield return null;
+
+        if (joinTask.IsFaulted)
+        {
+            Debug.LogError($"GameController (JoinRoom): {joinTask.Exception}");
+
+            ShutdownAll();
+            yield break;
+        }
+
+        if (joinTask.IsCanceled)
+        {
+            Debug.LogError($"GameController (JoinRoom): {joinTask.Exception}");
+
+            ShutdownAll();
+            yield break;
+        }
+
+        bl_EventHandler.Menu.DispatchRoomJoin(false);
+
+        yield return new WaitForEndOfFrame();
     }
 
-    protected virtual Task InitializeRunner(NetworkRunner runner, Fusion.GameMode gameMode, NetAddress address, SceneRef sceneRef, string sessionName)
+    protected async Task InitializeRunner(NetworkRunner runner, Fusion.GameMode gameMode, NetAddress address, SceneRef sceneRef, string sessionName)
     {
         runner.TryGetComponent(out INetworkSceneManager sceneManager);
         if (sceneManager == null)
@@ -138,23 +162,36 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
             objectProvider = runner.gameObject.AddComponent<NetworkObjectProviderDefault>();
         }
 
+        /// If using this implementation, Server needs to load that scene once Session created ??
+        /*
         NetworkSceneInfo sceneInfo = new();
         if (sceneRef.IsValid)
         {
             sceneInfo.AddSceneRef(sceneRef, LoadSceneMode.Additive);
-        }
+        }*/
 
         runner.AddCallbacks(this);
 
-        return runner.StartGame(new StartGameArgs
+        StartGameResult result = await runner.StartGame(new StartGameArgs
         {
             GameMode = gameMode,
             Address = address,
-            Scene = sceneInfo,
+            Scene = sceneRef,
             SessionName = sessionName,
             SceneManager = sceneManager,
             ObjectProvider = objectProvider
         });
+
+        if (!result.Ok)
+        {
+            Debug.LogError($"GameController (InitializeRunner): {result.ShutdownReason}");
+            if (result.ShutdownReason == ShutdownReason.GameNotFound)
+            {
+                bl_EventHandler.Menu.DispatchNoRoomToJoin(result.ErrorMessage);
+            }
+
+            ShutdownAll();
+        }
     }
 
     void ShutdownAll()
@@ -168,17 +205,6 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
         }
 
         Destroy(RunnerPrefab.gameObject);
-    }
-
-    void OnDestroy()
-    {
-        SceneManager.sceneLoaded -= OnSceneLoaded;
-        bl_EventHandler.onPauseCall -= OnPause;
-    }
-
-    void OnPause(bool paused)
-    {
-        IsGamePaused = paused;
     }
 
     void OnSceneLoaded(Scene loadedScene, LoadSceneMode sceneLoadMode)
@@ -203,7 +229,7 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
         }
     }
 
-    public void StartGame(GameMode mode, string maxPoint, AIDifficulty difficulty)
+    public void StartGameOffline(GameMode mode, string maxPoint, AIDifficulty difficulty)
     {
         CurrentGameMode = mode;
         int.TryParse(maxPoint, out int points);
@@ -229,10 +255,18 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
 
     NetworkObject SpawnPlayerOnline(PlayerRef playerRef)
     {
+        /// Get spawnpoint based on PlayerId. Host will be always 1 so he will get SpawnPoint1 and Client SpawnPoint2.
         spawnPoint = playerRef.PlayerId == 1 ? SpawnPointManager.Instance.SpawnPoint1 : SpawnPointManager.Instance.SpawnPoint2;
-        
-        //TODO: Might need to use 'SpawnAsync' instead of 'Spawn'.
+
+        string spawnpoint = spawnPoint == SpawnPointManager.Instance.SpawnPoint1 ? "SpawnPoint 1" : "SpawnPoint 2";
+
+        Debug.LogWarning($"GameController (SpawnPlayerOnline): spawning Player {playerRef.PlayerId} to {spawnpoint}");
+
+        /// Might need to use 'SpawnAsync' instead of 'Spawn'.
         NetworkObject nObj = _server.Spawn(PlayerController, spawnPoint, Quaternion.identity, playerRef);
+
+        /// Host renames the GameObject for themselfs.
+        nObj.gameObject.name = $"Player {playerRef.PlayerId}";
 
         return nObj;
     }
@@ -324,13 +358,13 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
         {
             GameUI.Instance.GameFinish.ShowFinish("Player 1", "Player 2", Player1Points, Player2Points);
             IsGameDone = true;
-            bl_EventHandler.DispatchGameFinish();
+            bl_EventHandler.Match.DispatchGameFinish();
         }
         else if (Player2Points >= GameRequiredPoints)
         {
             GameUI.Instance.GameFinish.ShowFinish("Player 2", "Player 1", Player2Points, Player1Points);
             IsGameDone = true;
-            bl_EventHandler.DispatchGameFinish();
+            bl_EventHandler.Match.DispatchGameFinish();
         }
     }
 
@@ -338,42 +372,41 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
     {
         if (runner.ActivePlayers.Count() < 2)
         {
-            //TODO: Need to create an 'WaitingForPlayers' UI and enable it here.
             Debug.LogWarning("GameController (CheckPlayerCount): not enough players, waiting.");
 
+            bl_EventHandler.Match.DispatchPauseEvent(true);
             bl_EventHandler.Match.DispatchWaitingStatus(true);
+
+            //DEBUG:
+
+            //bl_EventHandler.Match.DispatchWaitingStatus(false);
+            //bl_EventHandler.Match.DispatchTimerStart();
         }
 
         if (runner.ActivePlayers.Count() == 2)
         {
-            //TODO: Need to start TickTimer for 5 seconds and disable 'WaitingForPlayers' UI.
-            Debug.LogWarning("GameController (CheckPlayerCount): enough players, starting in 5...");
+            Debug.LogWarning("GameController (CheckPlayerCount): enough players, starting in 10...");
 
             bl_EventHandler.Match.DispatchWaitingStatus(false);
+            bl_EventHandler.Match.DispatchTimerStart();
         }
     }
 
     #region Fusion Callbacks
-    public void OnObjectExitAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player)
-    {
-
-    }
-
-    public void OnObjectEnterAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player)
-    {
-
-    }
-
     public void OnPlayerJoined(NetworkRunner runner, PlayerRef player)
     {
         Debug.LogWarning($"GameController (OnPlayerJoined): Player {player.PlayerId} joined!");
         Debug.LogWarning($"GameController (OnPlayerJoined): Are we server? {runner.IsServer}");
 
+        /// If we are the Host, we spawn player characters.
         if (runner.IsServer)
         {
             NetworkObject spawnedPlayer = SpawnPlayerOnline(player);
 
             runner.SetPlayerObject(player, spawnedPlayer);
+
+            /// Cache the NetworkObject for later use.
+            _spawnedPlayers.Add(player, spawnedPlayer);
 
             CheckPlayerCount(runner);
         }
@@ -381,80 +414,55 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
 
     public void OnPlayerLeft(NetworkRunner runner, PlayerRef player)
     {
-        throw new NotImplementedException();
+        /// Despawn the NetworkObject and remove it from the Dictionary.
+        if (_spawnedPlayers.TryGetValue(player, out NetworkObject nObj))
+        {
+            runner.Despawn(nObj);
+            _spawnedPlayers.Remove(player);
+        }
     }
 
     public void OnInput(NetworkRunner runner, NetworkInput input)
     {
+        NetworkInputData data = new();
 
+        if (Input.GetKey(KeyCode.W))
+        {
+            data.Direction = Vector3.up;
+        }
+        if (Input.GetKey(KeyCode.S))
+        {
+            data.Direction = Vector3.down;
+        }
+
+        if (Input.GetKey(KeyCode.UpArrow))
+        {
+            data.Direction = Vector3.up;
+        }
+        if (Input.GetKey(KeyCode.DownArrow))
+        {
+            data.Direction = Vector3.down;
+        }
+
+        input.Set(data);
     }
 
-    public void OnInputMissing(NetworkRunner runner, PlayerRef player, NetworkInput input)
-    {
-
-    }
-
-    public void OnShutdown(NetworkRunner runner, ShutdownReason shutdownReason)
-    {
-
-    }
-
+    public void OnObjectExitAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
+    public void OnObjectEnterAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
+    public void OnInputMissing(NetworkRunner runner, PlayerRef player, NetworkInput input) { }
+    public void OnShutdown(NetworkRunner runner, ShutdownReason shutdownReason) { }
     public void OnConnectedToServer(NetworkRunner runner) { }
-
-    public void OnDisconnectedFromServer(NetworkRunner runner, NetDisconnectReason reason)
-    {
-
-    }
-
-    public void OnConnectRequest(NetworkRunner runner, NetworkRunnerCallbackArgs.ConnectRequest request, byte[] token)
-    {
-
-    }
-
-    public void OnConnectFailed(NetworkRunner runner, NetAddress remoteAddress, NetConnectFailedReason reason)
-    {
-
-    }
-
-    public void OnUserSimulationMessage(NetworkRunner runner, SimulationMessagePtr message)
-    {
-
-    }
-
-    public void OnSessionListUpdated(NetworkRunner runner, List<SessionInfo> sessionList)
-    {
-
-    }
-
-    public void OnCustomAuthenticationResponse(NetworkRunner runner, Dictionary<string, object> data)
-    {
-
-    }
-
-    public void OnHostMigration(NetworkRunner runner, HostMigrationToken hostMigrationToken)
-    {
-
-    }
-
-    public void OnReliableDataReceived(NetworkRunner runner, PlayerRef player, ReliableKey key, ArraySegment<byte> data)
-    {
-
-    }
-
-    public void OnReliableDataProgress(NetworkRunner runner, PlayerRef player, ReliableKey key, float progress)
-    {
-
-    }
-
-    public void OnSceneLoadDone(NetworkRunner runner)
-    {
-
-    }
-
-    public void OnSceneLoadStart(NetworkRunner runner)
-    {
-
-    }
+    public void OnDisconnectedFromServer(NetworkRunner runner, NetDisconnectReason reason) { }
+    public void OnConnectRequest(NetworkRunner runner, NetworkRunnerCallbackArgs.ConnectRequest request, byte[] token) { }
+    public void OnConnectFailed(NetworkRunner runner, NetAddress remoteAddress, NetConnectFailedReason reason) { }
+    public void OnUserSimulationMessage(NetworkRunner runner, SimulationMessagePtr message) { }
+    public void OnSessionListUpdated(NetworkRunner runner, List<SessionInfo> sessionList) { }
+    public void OnCustomAuthenticationResponse(NetworkRunner runner, Dictionary<string, object> data) { }
+    public void OnHostMigration(NetworkRunner runner, HostMigrationToken hostMigrationToken) { }
+    public void OnReliableDataReceived(NetworkRunner runner, PlayerRef player, ReliableKey key, ArraySegment<byte> data) { }
+    public void OnReliableDataProgress(NetworkRunner runner, PlayerRef player, ReliableKey key, float progress) { }
+    public void OnSceneLoadDone(NetworkRunner runner) { }
+    public void OnSceneLoadStart(NetworkRunner runner) { }
     #endregion
 
     static GameController _instance;
