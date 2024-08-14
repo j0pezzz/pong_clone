@@ -9,7 +9,7 @@ This is a simple clone of the classic Pong game. The game is developed in Unity 
 - Scoring system: Keep track of your score and the other player's score.
 - Local multiplayer: Play against a friend on the same device.
 - AI opponent: Play against a computer-controlled opponent.
-- Online Match (coming soon): Play against a friend.
+- Online Match (in development): Play against a friend.
 
 ## Controls
 - Player 1: Use the W (up) and S (down) keys to control your paddle.
@@ -19,6 +19,6 @@ This is a simple clone of the classic Pong game. The game is developed in Unity 
 The goal is to hit the ball with your paddle and make it pass your opponent's paddle.
 
 ## Installation
-1. Clone this repository: `git clone https://github.com/yourusername/pong-clone.git`
+1. Clone this repository: `git clone https://github.com/j0pezzz/pong-clone.git`
 2. Open the project in Unity.
 3. Click on the play button to start the game.
