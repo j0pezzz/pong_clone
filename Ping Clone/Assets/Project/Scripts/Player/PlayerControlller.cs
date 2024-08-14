@@ -1,6 +1,7 @@
+using Fusion;
 using UnityEngine;
 
-public class PlayerControlller : MonoBehaviour
+public class PlayerControlller : NetworkBehaviour
 {
     [Range(1, 5)] public float Speed = 5f;
 
@@ -10,13 +11,16 @@ public class PlayerControlller : MonoBehaviour
 
     Vector3 initPosition;
 
-    void Awake()
+    public override void Spawned()
     {
+        Debug.LogWarning("We are spawned");
+        bl_EventHandler.Match.DispatchInMatchStatus(true);
+
         initPosition = transform.position;
         m_Transform = transform;
     }
 
-    void Update()
+    public override void FixedUpdateNetwork()
     {
         if (GameController.Instance.IsGameDone || GameController.Instance.IsGamePaused) return;
 
@@ -48,12 +52,12 @@ public class PlayerControlller : MonoBehaviour
     {
         if (Input.GetKey(KeyCode.UpArrow))
         {
-            float newY = Mathf.Clamp(transform.position.y + Speed * Time.deltaTime, GameController.Instance.BottomBound, GameController.Instance.TopBound);
+            float newY = Mathf.Clamp(transform.position.y + Speed * Runner.DeltaTime, GameController.Instance.BottomBound, GameController.Instance.TopBound);
             m_Transform.position = new(m_Transform.position.x, newY, m_Transform.position.z);
         }
         if (Input.GetKey(KeyCode.DownArrow))
         {
-            float newY = Mathf.Clamp(transform.position.y + -Speed * Time.deltaTime, GameController.Instance.BottomBound, GameController.Instance.TopBound);
+            float newY = Mathf.Clamp(transform.position.y + -Speed * Runner.DeltaTime, GameController.Instance.BottomBound, GameController.Instance.TopBound);
             m_Transform.position = new(m_Transform.position.x, newY, m_Transform.position.z);
         }
     }
@@ -65,12 +69,12 @@ public class PlayerControlller : MonoBehaviour
     {
         if (Input.GetKey(KeyCode.W))
         {
-            float newY = Mathf.Clamp(m_Transform.position.y + Speed * Time.deltaTime, GameController.Instance.BottomBound, GameController.Instance.TopBound);
+            float newY = Mathf.Clamp(m_Transform.position.y + Speed * Runner.DeltaTime, GameController.Instance.BottomBound, GameController.Instance.TopBound);
             m_Transform.position = new(m_Transform.position.x, newY, m_Transform.position.z);
         }
         if (Input.GetKey(KeyCode.S))
         {
-            float newY = Mathf.Clamp(m_Transform.position.y + -Speed * Time.deltaTime, GameController.Instance.BottomBound, GameController.Instance.TopBound);
+            float newY = Mathf.Clamp(m_Transform.position.y + -Speed * Runner.DeltaTime, GameController.Instance.BottomBound, GameController.Instance.TopBound);
             m_Transform.position = new(m_Transform.position.x, newY, m_Transform.position.z);
         }
     }

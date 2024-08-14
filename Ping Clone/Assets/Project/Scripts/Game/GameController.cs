@@ -1,18 +1,21 @@
 using Fusion;
 using Fusion.Sockets;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public class GameController : MonoBehaviour
+public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
 {
     #region Public Members
     public GameObject PlayerController;
     public GameObject AIPrefab;
     public GameObject BallPrefab;
     public NetworkRunner RunnerPrefab;
+    [ScenePath]
+    public string InitialScenePath;
 
     public float TopBound = 4f;
     public float BottomBound = -4f;
@@ -56,7 +59,7 @@ public class GameController : MonoBehaviour
         DontDestroyOnLoad(gameObject);
         Instance = this;
 
-        SceneManager.sceneLoaded += OnSceneLoaded;
+        //SceneManager.sceneLoaded += OnSceneLoaded;
         bl_EventHandler.onPauseCall += OnPause;
     }
 
@@ -66,19 +69,22 @@ public class GameController : MonoBehaviour
         RunnerPrefab = Instantiate(RunnerPrefab);
         DontDestroyOnLoad(RunnerPrefab);
         RunnerPrefab.name = "Temp Network Runner";
+        bl_EventHandler.Network.DispatchOnlineStatus();
     }
 
     public System.Collections.IEnumerator HostRoom()
     {
         string sessionName = Guid.NewGuid().ToString();
-        Debug.LogWarning($"MenuHandler (HostRoom): generedted session name={sessionName}");
+        Debug.LogWarning($"GameController (HostRoom): genereted session name={sessionName}");
 
         _server = Instantiate(RunnerPrefab);
         _server.name = Fusion.GameMode.Host.ToString();
 
-        SceneRef sceneRef = SceneRef.FromIndex(SceneManager.GetSceneByName("Game").buildIndex);
+        SceneRef sceneRef = SceneRef.FromIndex(SceneUtility.GetBuildIndexByScenePath(InitialScenePath));
 
         Task serverTask = InitializeRunner(_server, Fusion.GameMode.Host, NetAddress.Any(), sceneRef, sessionName);
+
+        bl_EventHandler.Menu.DispatchRoomCreate(true);
 
         while (!serverTask.IsCompleted) yield return new WaitForSeconds(1);
 
@@ -89,6 +95,12 @@ public class GameController : MonoBehaviour
             ShutdownAll();
             yield break;
         }
+
+        bl_EventHandler.Menu.DispatchRoomCreate(false);
+
+        //_server.AddCallbacks(this);
+
+        Debug.LogWarning($"GameController (HostRoom): NetworkRunner {_server.name} is initialized");
 
         yield return new WaitForEndOfFrame();
     }
@@ -131,6 +143,8 @@ public class GameController : MonoBehaviour
         {
             sceneInfo.AddSceneRef(sceneRef, LoadSceneMode.Additive);
         }
+
+        runner.AddCallbacks(this);
 
         return runner.StartGame(new StartGameArgs
         {
@@ -175,11 +189,11 @@ public class GameController : MonoBehaviour
 
             if (CurrentGameMode == GameMode.PvP)
             {
-                SpawnPlayers();
+                SpawnPlayersOffline();
             }
             else if (CurrentGameMode == GameMode.PvE)
             {
-                SpawnPlayers(1);
+                SpawnPlayersOffline(1);
                 SpawnAI();
             }
             else if (CurrentGameMode == GameMode.EvE)
@@ -213,7 +227,17 @@ public class GameController : MonoBehaviour
         cacheBall.SetBallToInit();
     }
 
-    void SpawnPlayers(int amount = 2)
+    NetworkObject SpawnPlayerOnline(PlayerRef playerRef)
+    {
+        spawnPoint = playerRef.PlayerId == 1 ? SpawnPointManager.Instance.SpawnPoint1 : SpawnPointManager.Instance.SpawnPoint2;
+        
+        //TODO: Might need to use 'SpawnAsync' instead of 'Spawn'.
+        NetworkObject nObj = _server.Spawn(PlayerController, spawnPoint, Quaternion.identity, playerRef);
+
+        return nObj;
+    }
+
+    void SpawnPlayersOffline(int amount = 2)
     {
         for (int i = 0; i < amount; i++)
         {
@@ -309,6 +333,129 @@ public class GameController : MonoBehaviour
             bl_EventHandler.DispatchGameFinish();
         }
     }
+
+    void CheckPlayerCount(NetworkRunner runner)
+    {
+        if (runner.ActivePlayers.Count() < 2)
+        {
+            //TODO: Need to create an 'WaitingForPlayers' UI and enable it here.
+            Debug.LogWarning("GameController (CheckPlayerCount): not enough players, waiting.");
+
+            bl_EventHandler.Match.DispatchWaitingStatus(true);
+        }
+
+        if (runner.ActivePlayers.Count() == 2)
+        {
+            //TODO: Need to start TickTimer for 5 seconds and disable 'WaitingForPlayers' UI.
+            Debug.LogWarning("GameController (CheckPlayerCount): enough players, starting in 5...");
+
+            bl_EventHandler.Match.DispatchWaitingStatus(false);
+        }
+    }
+
+    #region Fusion Callbacks
+    public void OnObjectExitAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player)
+    {
+
+    }
+
+    public void OnObjectEnterAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player)
+    {
+
+    }
+
+    public void OnPlayerJoined(NetworkRunner runner, PlayerRef player)
+    {
+        Debug.LogWarning($"GameController (OnPlayerJoined): Player {player.PlayerId} joined!");
+        Debug.LogWarning($"GameController (OnPlayerJoined): Are we server? {runner.IsServer}");
+
+        if (runner.IsServer)
+        {
+            NetworkObject spawnedPlayer = SpawnPlayerOnline(player);
+
+            runner.SetPlayerObject(player, spawnedPlayer);
+
+            CheckPlayerCount(runner);
+        }
+    }
+
+    public void OnPlayerLeft(NetworkRunner runner, PlayerRef player)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void OnInput(NetworkRunner runner, NetworkInput input)
+    {
+
+    }
+
+    public void OnInputMissing(NetworkRunner runner, PlayerRef player, NetworkInput input)
+    {
+
+    }
+
+    public void OnShutdown(NetworkRunner runner, ShutdownReason shutdownReason)
+    {
+
+    }
+
+    public void OnConnectedToServer(NetworkRunner runner) { }
+
+    public void OnDisconnectedFromServer(NetworkRunner runner, NetDisconnectReason reason)
+    {
+
+    }
+
+    public void OnConnectRequest(NetworkRunner runner, NetworkRunnerCallbackArgs.ConnectRequest request, byte[] token)
+    {
+
+    }
+
+    public void OnConnectFailed(NetworkRunner runner, NetAddress remoteAddress, NetConnectFailedReason reason)
+    {
+
+    }
+
+    public void OnUserSimulationMessage(NetworkRunner runner, SimulationMessagePtr message)
+    {
+
+    }
+
+    public void OnSessionListUpdated(NetworkRunner runner, List<SessionInfo> sessionList)
+    {
+
+    }
+
+    public void OnCustomAuthenticationResponse(NetworkRunner runner, Dictionary<string, object> data)
+    {
+
+    }
+
+    public void OnHostMigration(NetworkRunner runner, HostMigrationToken hostMigrationToken)
+    {
+
+    }
+
+    public void OnReliableDataReceived(NetworkRunner runner, PlayerRef player, ReliableKey key, ArraySegment<byte> data)
+    {
+
+    }
+
+    public void OnReliableDataProgress(NetworkRunner runner, PlayerRef player, ReliableKey key, float progress)
+    {
+
+    }
+
+    public void OnSceneLoadDone(NetworkRunner runner)
+    {
+
+    }
+
+    public void OnSceneLoadStart(NetworkRunner runner)
+    {
+
+    }
+    #endregion
 
     static GameController _instance;
     public static GameController Instance

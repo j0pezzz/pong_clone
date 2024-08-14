@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class MenuHandler : Fusion.Behaviour
 {
+    [SerializeField] GameObject Content;
     [SerializeField] GameObject MatchSettings;
     //TODO: Need to find a better suiting name for 'ChooseScreen' & 'NetworkScreen'.
     [SerializeField] GameObject ChooseScreen;
@@ -12,8 +13,48 @@ public class MenuHandler : Fusion.Behaviour
     [SerializeField] TMP_Dropdown aiDifficulty;
     [SerializeField] GameObject JoinRoomContent;
     [SerializeField] TMP_InputField SessionName;
+    [SerializeField] GameObject RoomCreationUI;
 
     GameMode cacheGameMode;
+
+    void OnEnable()
+    {
+        bl_EventHandler.Network.Online += OnOnline;
+        bl_EventHandler.Match.InMatch += InMatch;
+        bl_EventHandler.Menu.CreatingRoom += RoomCreation;
+    }
+
+    void OnDisable()
+    {
+        bl_EventHandler.Network.Online -= OnOnline;
+        bl_EventHandler.Match.InMatch -= InMatch;
+        bl_EventHandler.Menu.CreatingRoom -= RoomCreation;
+    }
+
+    void RoomCreation(bool creating)
+    {
+        RoomCreationUI.SetActive(creating);
+    }
+
+    void OnOnline()
+    {
+        ChooseScreen.SetActive(false);
+        NetworkScreen.SetActive(true);
+    }
+
+    void InMatch(bool inMatch)
+    {
+        //TODO: Need to make this look better using the 'inMatch' bool instead of hardcoding false and true.
+        if (inMatch)
+        {
+            Content.SetActive(false);
+            MatchSettings.SetActive(false);
+        }
+        else
+        {
+            Content.SetActive(true);
+        }
+    }
 
     void ShowMatchSettings(bool active)
     {
