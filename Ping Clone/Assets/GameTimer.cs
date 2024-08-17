@@ -153,7 +153,7 @@ public class GameTimer : NetworkBehaviour
 
         if (StartTimer.Expired(Runner) && !_startTimerExpired)
         {
-            Debug.LogWarning("GameTimer (Render): Timer expired!");
+            //Debug.LogWarning("GameTimer (Render): Start Timer expired!");
 
             if (Runner.IsServer)
             {
@@ -170,7 +170,7 @@ public class GameTimer : NetworkBehaviour
         {
             if (!Content.activeInHierarchy) Content.SetActive(true);
 
-            Debug.LogWarning("GameTimer (Render): Running");
+            //Debug.LogWarning("GameTimer (Render): Start Timer running.");
             string time = StringUtility.GetTimeFormat((int)StartTimer.RemainingTicks(Runner));
             StartingText.text = $"STARTING IN {time}";
         }
@@ -183,7 +183,7 @@ public class GameTimer : NetworkBehaviour
 
             string formattedTime = FormatTime(elapsedTime);
 
-            Debug.LogWarning($"Round has been played for {formattedTime}");
+            //Debug.LogWarning($"Round has been played for {formattedTime}");
 
             RoundTimer.text = formattedTime;
         }

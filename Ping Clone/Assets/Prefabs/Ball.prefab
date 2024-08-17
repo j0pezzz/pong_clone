@@ -50,6 +50,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Speed: 5
+  MaxSpeed: 30
+  SpeedIncrement: 30
+  SpeedIncrementFactor: 1.5
   rb: {fileID: 3370194145226746745}
   mapPrefabs: {fileID: 0}
 --- !u!54 &3370194145226746745

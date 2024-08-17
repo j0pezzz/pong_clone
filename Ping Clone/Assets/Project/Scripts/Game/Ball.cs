@@ -3,7 +3,7 @@ using UnityEngine;
 
 public class Ball : NetworkBehaviour
 {
-    [Range(1, 20)] public float Speed = 5f;
+    public float Speed = 5f;
     public float MaxSpeed = 30;
     [Tooltip("Time in seconds for each speed increment")]
     public float SpeedIncrement = 30;
@@ -18,6 +18,7 @@ public class Ball : NetworkBehaviour
 
     float xDir, yDir;
     float elapsedTime = 0;
+    float _lastSpeedIncrementTime = 0;
 
     GameObject paddle1, paddle2;
     AIController paddleController1, paddleController2;
@@ -47,12 +48,14 @@ public class Ball : NetworkBehaviour
         {
             elapsedTime = (Runner.Tick - GameTimer._initialTick) / (float)Runner.TickRate;
 
-            float incrementCount = Mathf.Floor(elapsedTime / SpeedIncrement);
-            float newSpeed = Speed * Mathf.Pow(SpeedIncrementFactor, incrementCount);
+            if (elapsedTime - _lastSpeedIncrementTime >= SpeedIncrement)
+            {
+                Speed = Mathf.Min(Speed * SpeedIncrementFactor, MaxSpeed);
 
-            Speed = Mathf.Min(newSpeed, MaxSpeed);
+                _lastSpeedIncrementTime = elapsedTime;
 
-            rb.velocity = rb.velocity.normalized * Speed;
+                Debug.LogWarning($"Speed: {Speed}");
+            }
         }
         else
         {
