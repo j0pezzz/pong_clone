@@ -1,8 +1,15 @@
+using Fusion;
 using UnityEngine;
 
-public class Ball : MonoBehaviour
+public class Ball : NetworkBehaviour
 {
     [Range(1, 20)] public float Speed = 5f;
+    public float MaxSpeed = 30;
+    [Tooltip("Time in seconds for each speed increment")]
+    public float SpeedIncrement = 30;
+    [Tooltip("Multiplier applied to the speed")]
+    public float SpeedIncrementFactor = 1.1f;
+
     public Rigidbody rb;
     public MapPrefabs mapPrefabs;
 
@@ -10,25 +17,47 @@ public class Ball : MonoBehaviour
     Vector3 pausedVelocity;
 
     float xDir, yDir;
+    float elapsedTime = 0;
 
     GameObject paddle1, paddle2;
     AIController paddleController1, paddleController2;
 
-    void Awake()
+    bool _initialLaunchDone = false;
+
+    public override void Spawned()
     {
+        if (!Runner.IsServer) return;
+
         initPos = transform.position;
 
         LaunchBall();
         bl_EventHandler.Match.onPauseCall += OnGamePaused;
     }
 
-    void Update()
+    public override void FixedUpdateNetwork()
     {
         if (GameController.Instance == null) return;
 
-        if (GameController.Instance.IsGameDone)
+        if (GameTimer.Instance.IsGameDone > 0)
         {
             rb.velocity = Vector3.zero;
+        }
+
+        if (_initialLaunchDone)
+        {
+            elapsedTime = (Runner.Tick - GameTimer._initialTick) / (float)Runner.TickRate;
+
+            float incrementCount = Mathf.Floor(elapsedTime / SpeedIncrement);
+            float newSpeed = Speed * Mathf.Pow(SpeedIncrementFactor, incrementCount);
+
+            Speed = Mathf.Min(newSpeed, MaxSpeed);
+
+            rb.velocity = rb.velocity.normalized * Speed;
+        }
+        else
+        {
+            LaunchBall();
+            _initialLaunchDone = true;
         }
     }
 
@@ -47,6 +76,8 @@ public class Ball : MonoBehaviour
 
     public void SetBallToInit()
     {
+        if (!Runner.IsServer) return;
+
         transform.position = initPos;
         LaunchBall();
     }
@@ -67,7 +98,9 @@ public class Ball : MonoBehaviour
 
     void OnCollisionEnter(Collision collision)
     {
-        if (GameController.Instance != null && GameController.Instance.IsGameDone) return;
+        if (!Runner.IsServer) return;
+
+        if (GameTimer.Instance != null && GameTimer.Instance.IsGameDone > 0) return;
 
         if (collision.gameObject.CompareTag("Paddle1"))
         {
@@ -87,39 +120,38 @@ public class Ball : MonoBehaviour
         }
     }
 
-    float HitFactor(Vector2 ballPos, Vector2 playerPos, float playerHeight)
-    {
-        return (ballPos.y - playerPos.y) / playerHeight;
-    }
+    float HitFactor(Vector2 ballPos, Vector2 playerPos, float playerHeight) => (ballPos.y - playerPos.y) / playerHeight;
 
     void OnTriggerEnter(Collider other)
     {
-        if (GameController.Instance != null && GameController.Instance.IsGameDone) return;
+        if (!Runner.IsServer) return;
 
-        bool enterP1Goal = other.gameObject.CompareTag("Player 1 Goal");
-        bool enterP2Goal = other.gameObject.CompareTag("Player 2 Goal");
+        if (GameTimer.Instance != null && GameTimer.Instance.IsGameDone > 0) return;
 
-        if (enterP1Goal)
+        Team scoringTeam = GetScoringTeam(other.gameObject.tag);
+
+        if (scoringTeam != Team.None)
         {
-            //mapPrefabs.AI.OnBallMissed();
+            GameTimer.AddScore(scoringTeam);
 
-            GameController.Instance.AddScore("Player 2");
-        }
-
-        if (enterP2Goal)
-        {
-            //mapPrefabs.AI.OnBallMissed();
-
-            GameController.Instance.AddScore("Player 1");
-        }
-
-        if (enterP1Goal || enterP2Goal)
-        {
             //Note: Disable these when training.
             SetBallToInit();
 
             GameController.Instance.ResetGame();
         }
+    }
 
+    Team GetScoringTeam(string tag)
+    {
+        if (tag == "Player 1 Goal")
+        {
+            return Team.Team2;
+        }
+        else if (tag == "Player 2 Goal")
+        {
+            return Team.Team1;
+        }
+
+        return Team.None;
     }
 }

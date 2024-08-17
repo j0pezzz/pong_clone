@@ -30,10 +30,6 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
     #endregion
 
     #region Public Properties
-    public bool IsGameDone { get; set; } = false;
-
-    public int Player1Points { get; private set; } = 0;
-    public int Player2Points { get; private set; } = 0;
     public static int GameRequiredPoints { get; private set; } = 5;
     public static AIDifficulty AIDifficulty { get; private set; }
     public bool IsOnline { get; private set; }
@@ -63,22 +59,30 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
         Instance = this;
     }
 
-    void OnDestroy()
-    {
-        SceneManager.sceneLoaded -= OnSceneLoaded;
-    }
-
     public void StartRunner()
     {
         IsOnline = true;
+        if (RunnerPrefab == null)
+        {
+            RunnerPrefab = FindObjectOfType<NetworkRunner>();
+        }
+
         RunnerPrefab = Instantiate(RunnerPrefab);
         DontDestroyOnLoad(RunnerPrefab);
         RunnerPrefab.name = "Temp Network Runner";
-        bl_EventHandler.Network.DispatchOnlineStatus();
+        bl_EventHandler.Network.DispatchOnlineStatus(true);
     }
 
-    public System.Collections.IEnumerator HostRoom()
+    public void StopRunner()
     {
+        IsOnline = false;
+        Destroy(RunnerPrefab.gameObject);
+        bl_EventHandler.Network.DispatchOnlineStatus(false);
+    }
+
+    public System.Collections.IEnumerator HostRoom(string points)
+    {
+        int.TryParse(points, out int requiredPoints);
         string sessionName = UnityEngine.Random.Range(0, 99999).ToString();
         Debug.LogWarning($"GameController (HostRoom): genereted session name={sessionName}");
 
@@ -106,6 +110,8 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
         Debug.LogWarning($"GameController (HostRoom): NetworkRunner {_server.name} is initialized");
 
         SessionInfo = _server.SessionInfo;
+
+        GameRequiredPoints = requiredPoints;
 
         yield return new WaitForEndOfFrame();
     }
@@ -179,7 +185,7 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
             Scene = sceneRef,
             SessionName = sessionName,
             SceneManager = sceneManager,
-            ObjectProvider = objectProvider
+            ObjectProvider = objectProvider,
         });
 
         if (!result.Ok)
@@ -194,7 +200,7 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
         }
     }
 
-    void ShutdownAll()
+    public void ShutdownAll()
     {
         foreach (NetworkRunner runner in NetworkRunner.Instances.ToList())
         {
@@ -240,6 +246,14 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
 
     public void ResetGame()
     {
+        foreach (NetworkObject nObj in _spawnedPlayers.Values)
+        {
+            if (nObj.HasInputAuthority && nObj.TryGetComponent(out PlayerControlller controller))
+            {
+                controller.SetPlayerToInitPosition();
+            }
+        }
+
         foreach (PlayerControlller controller in playerControllers.Values)
         {
             controller.SetPlayerToInitPosition();
@@ -249,6 +263,8 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
         {
             aiController.SetToInit();
         }
+
+        GameTimer.Instance.RoundStart();
 
         cacheBall.SetBallToInit();
     }
@@ -330,41 +346,17 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
         }
     }
 
-    void SpawnBall()
+    /// <summary>
+    /// Spawns the Ball inside the Network.
+    /// </summary>
+    public void SpawnBall()
     {
-        GameObject ball = Instantiate(BallPrefab, new Vector3(0, 0, -0.25f), Quaternion.identity);
+        NetworkObject ball = _server.Spawn(BallPrefab, new Vector3(0, 0, -0.25f), Quaternion.identity, _server.LocalPlayer);
+        //GameObject ball = Instantiate(BallPrefab, new Vector3(0, 0, -0.25f), Quaternion.identity);
 
         if (!ball.TryGetComponent(out cacheBall))
         {
-            Debug.LogError("No Ball script attached");
-        }
-    }
-
-    public void AddScore(string player)
-    {
-        switch (player)
-        {
-            case "Player 1":
-                Player1Points++;
-                break;
-            case "Player 2":
-                Player2Points++;
-                break;
-        }
-
-        GameUI.Instance.ScoreUI.UpdateScores(Player1Points, Player2Points);
-
-        if (Player1Points >= GameRequiredPoints)
-        {
-            GameUI.Instance.GameFinish.ShowFinish("Player 1", "Player 2", Player1Points, Player2Points);
-            IsGameDone = true;
-            bl_EventHandler.Match.DispatchGameFinish();
-        }
-        else if (Player2Points >= GameRequiredPoints)
-        {
-            GameUI.Instance.GameFinish.ShowFinish("Player 2", "Player 1", Player2Points, Player1Points);
-            IsGameDone = true;
-            bl_EventHandler.Match.DispatchGameFinish();
+            Debug.LogError("GameController (SpawnBall): no Ball script attached");
         }
     }
 
@@ -420,37 +412,49 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
             runner.Despawn(nObj);
             _spawnedPlayers.Remove(player);
         }
+
+        if (runner.IsServer)
+        {
+            /// Since a player left, it means we the Host are alone.
+            /// We should give the Host an option to either leave the session or start the match again.
+            bl_EventHandler.Match.DispatchPauseEvent(true);
+            GameUI.Instance.PlayerLeft.SetActive(true);
+
+            if (cacheBall != null)
+            {
+                runner.Despawn(cacheBall.Object);
+            }
+
+            GameTimer.Instance.StartTimer = TickTimer.None;
+        }
     }
 
     public void OnInput(NetworkRunner runner, NetworkInput input)
     {
         NetworkInputData data = new();
 
-        if (Input.GetKey(KeyCode.W))
-        {
-            data.Direction = Vector3.up;
-        }
-        if (Input.GetKey(KeyCode.S))
-        {
-            data.Direction = Vector3.down;
-        }
+        /// W & S controls.
+        data.Buttons.Set(Buttons.Up, Input.GetKey(KeyCode.W));
+        data.Buttons.Set(Buttons.Down, Input.GetKey(KeyCode.S));
 
-        if (Input.GetKey(KeyCode.UpArrow))
-        {
-            data.Direction = Vector3.up;
-        }
-        if (Input.GetKey(KeyCode.DownArrow))
-        {
-            data.Direction = Vector3.down;
-        }
+        /// If calling Arrow controls after W & S controls, only Arrow controls will work.
+        /// Up & Down Arrow controls.
+        //data.Buttons.Set(Buttons.Up, Input.GetKey(KeyCode.UpArrow));
+        //data.Buttons.Set(Buttons.Down, Input.GetKey(KeyCode.DownArrow));
 
         input.Set(data);
+    }
+
+    public void OnShutdown(NetworkRunner runner, ShutdownReason shutdownReason)
+    {
+        /// Since the NetworkRunner has been Shutdown, we just load the MainMenu.
+        ShutdownAll();
+        SceneManager.LoadScene("MainMenu");
     }
 
     public void OnObjectExitAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
     public void OnObjectEnterAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
     public void OnInputMissing(NetworkRunner runner, PlayerRef player, NetworkInput input) { }
-    public void OnShutdown(NetworkRunner runner, ShutdownReason shutdownReason) { }
     public void OnConnectedToServer(NetworkRunner runner) { }
     public void OnDisconnectedFromServer(NetworkRunner runner, NetDisconnectReason reason) { }
     public void OnConnectRequest(NetworkRunner runner, NetworkRunnerCallbackArgs.ConnectRequest request, byte[] token) { }

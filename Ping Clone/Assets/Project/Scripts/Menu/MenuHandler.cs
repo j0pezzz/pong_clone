@@ -1,5 +1,6 @@
 using System;
 using TMPro;
+using UnityEditor.EditorTools;
 using UnityEngine;
 
 public class MenuHandler : Fusion.Behaviour
@@ -23,7 +24,7 @@ public class MenuHandler : Fusion.Behaviour
     void OnEnable()
     {
         bl_EventHandler.Network.Online += OnOnline;
-        bl_EventHandler.Match.InMatch += InMatch;
+        bl_EventHandler.Match.onMatch += InMatch;
         bl_EventHandler.Menu.CreatingRoom += RoomCreation;
         bl_EventHandler.Menu.JoinRoom += JoiningRoom;
         bl_EventHandler.Menu.NoRoom += NoRoomToJoin;
@@ -32,7 +33,7 @@ public class MenuHandler : Fusion.Behaviour
     void OnDisable()
     {
         bl_EventHandler.Network.Online -= OnOnline;
-        bl_EventHandler.Match.InMatch -= InMatch;
+        bl_EventHandler.Match.onMatch -= InMatch;
         bl_EventHandler.Menu.CreatingRoom -= RoomCreation;
         bl_EventHandler.Menu.JoinRoom -= JoiningRoom;
         bl_EventHandler.Menu.NoRoom -= NoRoomToJoin;
@@ -54,15 +55,23 @@ public class MenuHandler : Fusion.Behaviour
         ErrorMessage.text = message;
     }
 
-    void OnOnline()
+    void OnOnline(bool online)
     {
-        ChooseScreen.SetActive(false);
-        NetworkScreen.SetActive(true);
+        if (online)
+        {
+            ChooseScreen.SetActive(false);
+            NetworkScreen.SetActive(true);
+        }
+        else
+        {
+            NetworkScreen.SetActive(false);
+            ChooseScreen.SetActive(true);
+        }
     }
 
     void InMatch(bool inMatch)
     {
-        //TODO: Need to make this look better using the 'inMatch' bool instead of hardcoding false and true.
+        //TODO: Need to make this look better using the 'inMatch' bool instead of hardcoding false and true??
         if (inMatch)
         {
             Content.SetActive(false);
@@ -74,18 +83,10 @@ public class MenuHandler : Fusion.Behaviour
         }
     }
 
-    void ShowMatchSettings(bool active)
-    {
-        MatchSettings.SetActive(active);
-
-        aiDifficulty.gameObject.SetActive(cacheGameMode == GameMode.PvE || cacheGameMode == GameMode.EvE);
-    }
-
     public void SetGameMode(string gameMode) 
     { 
         cacheGameMode = (GameMode)Enum.Parse(typeof(GameMode), gameMode);
         ChooseScreen.SetActive(cacheGameMode == GameMode.PvP);
-        ShowMatchSettings(true);
     }
 
     public void PlayGame()
@@ -97,6 +98,10 @@ public class MenuHandler : Fusion.Behaviour
             AIDifficulty difficulty = (AIDifficulty)aiDifficulty.value;
             GameController.Instance.StartGameOffline(cacheGameMode, points, difficulty);
         }
+        else
+        {
+            StartCoroutine(GameController.Instance.HostRoom(points));
+        }
     }
 
     public void PlayOnline(bool online)
@@ -105,11 +110,18 @@ public class MenuHandler : Fusion.Behaviour
         {
             GameController.Instance.StartRunner();
         }
+        else
+        {
+            GameController.Instance.StopRunner();
+        }
     }
 
     public void HostRoom()
     {
-        StartCoroutine(GameController.Instance.HostRoom());
+        NetworkScreen.SetActive(false);
+        MatchSettings.SetActive(true);
+
+        aiDifficulty.gameObject.SetActive(!GameController.Instance.IsOnline);
     }
 
     public void JoinRoom(bool isJoining)

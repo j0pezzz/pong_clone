@@ -1,8 +1,6 @@
 fileFormatVersion: 2
-guid: a4d6425e3e164d649824b8c679dad10c
-labels:
-- FusionPrefab
-PrefabImporter:
+guid: 6123009c38959a64cb3aa1af4a52ad25
+TextScriptImporter:
   externalObjects: {}
   userData: 
   assetBundleName: 

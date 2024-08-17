@@ -3,6 +3,7 @@ using UnityEngine;
 
 public class PlayerControlller : NetworkBehaviour
 {
+    [Networked] public NetworkButtons ButtonsPrevious { get; set; }
     [Range(1, 5)] public float Speed = 5f;
 
     public int PlayerRef = 1;
@@ -22,14 +23,19 @@ public class PlayerControlller : NetworkBehaviour
 
     public override void FixedUpdateNetwork()
     {
-        if (!Object.HasInputAuthority) return;
-
-        if (GameController.Instance.IsGameDone) return;
+        if (GameTimer.Instance.IsGameDone > 0) return;
         if (GameTimer.Instance.IsGamePaused > 0) return;
 
         if (GetInput(out NetworkInputData data))
         {
-            float newY = Mathf.Clamp(transform.position.y + (data.Direction.y * Speed) * Runner.DeltaTime, GameController.Instance.BottomBound, GameController.Instance.TopBound);
+            NetworkButtons pressed = data.Buttons.GetPressed(ButtonsPrevious);
+            NetworkButtons released = data.Buttons.GetReleased(ButtonsPrevious);
+
+            ButtonsPrevious = data.Buttons;
+
+            float yDir = data.Buttons.IsSet(Buttons.Up) ? 1 : data.Buttons.IsSet(Buttons.Down) ? -1 : 0;
+
+            float newY = Mathf.Clamp(transform.position.y + (yDir * Speed) * Runner.DeltaTime, GameController.Instance.BottomBound, GameController.Instance.TopBound);
             m_Transform.position = new(m_Transform.position.x, newY, m_Transform.position.z);
         }
     }
