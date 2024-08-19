@@ -86,6 +86,7 @@ public class MenuHandler : Fusion.Behaviour
     { 
         cacheGameMode = (GameMode)Enum.Parse(typeof(GameMode), gameMode);
         ChooseScreen.SetActive(cacheGameMode == GameMode.PvP);
+        MatchSettings.SetActive(cacheGameMode == GameMode.PvE);
     }
 
     public void PlayGame()
@@ -95,7 +96,7 @@ public class MenuHandler : Fusion.Behaviour
         if (!GameController.Instance.IsOnline)
         {
             AIDifficulty difficulty = (AIDifficulty)aiDifficulty.value;
-            GameController.Instance.StartGameOffline(cacheGameMode, points, difficulty);
+            StartCoroutine(GameController.Instance.CreateRoomLocally(cacheGameMode, points, difficulty));
         }
         else
         {
@@ -111,9 +112,13 @@ public class MenuHandler : Fusion.Behaviour
         }
         else
         {
-            GameController.Instance.StopRunner();
+            GameController.Instance.StartOfflineRunner();
+            ChooseScreen.SetActive(false);
+            MatchSettings.SetActive(true);
         }
     }
+
+    public void StopOnline() => GameController.Instance.StopRunner();
 
     public void HostRoom()
     {

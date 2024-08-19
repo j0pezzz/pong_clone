@@ -73,6 +73,19 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
         bl_EventHandler.Network.DispatchOnlineStatus(true);
     }
 
+    public void StartOfflineRunner()
+    {
+        IsOnline = false;
+        if (RunnerPrefab == null)
+        {
+            RunnerPrefab = FindObjectOfType<NetworkRunner>();
+        }
+
+        RunnerPrefab = Instantiate(RunnerPrefab);
+        DontDestroyOnLoad(RunnerPrefab);
+        RunnerPrefab.name = "Temp Network Runner";
+    }
+
     public void StopRunner()
     {
         IsOnline = false;
@@ -152,6 +165,45 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
         yield return new WaitForEndOfFrame();
     }
 
+    //TODO: Need to re-work single player.
+    public System.Collections.IEnumerator CreateRoomLocally(GameMode gameMode, string points, AIDifficulty difficulty)
+    {
+        int.TryParse(points, out int requiredPoints);
+        string sessionName = UnityEngine.Random.Range(0, 99999).ToString();
+        Debug.LogWarning($"GameController (CreateRoomLocally): genereted session name={sessionName}");
+
+        _server = Instantiate(RunnerPrefab);
+        _server.name = Fusion.GameMode.Single.ToString();
+
+        SceneRef sceneRef = SceneRef.FromIndex(SceneUtility.GetBuildIndexByScenePath(InitialScenePath));
+
+        Task serverTask = InitializeRunner(_server, Fusion.GameMode.Single, NetAddress.Any(), sceneRef, sessionName);
+
+        bl_EventHandler.Menu.DispatchRoomCreate(true);
+
+        while (!serverTask.IsCompleted) yield return null;
+
+        if (serverTask.IsFaulted)
+        {
+            Debug.LogError($"GameController (CreateRoomLocally): {serverTask.Exception}");
+
+            ShutdownAll();
+            yield break;
+        }
+
+        bl_EventHandler.Menu.DispatchRoomCreate(false);
+
+        Debug.LogWarning($"GameController (CreateRoomLocally): NetworkRunner {_server.name} is initialized");
+
+        SessionInfo = _server.SessionInfo;
+
+        GameRequiredPoints = requiredPoints;
+        CurrentGameMode = gameMode;
+        AIDifficulty = difficulty;
+
+        yield return new WaitForEndOfFrame();
+    }
+
     protected async Task InitializeRunner(NetworkRunner runner, Fusion.GameMode gameMode, NetAddress address, SceneRef sceneRef, string sessionName)
     {
         runner.TryGetComponent(out INetworkSceneManager sceneManager);
@@ -210,38 +262,10 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
             }
         }
 
-        Destroy(RunnerPrefab.gameObject);
-    }
-
-    void OnSceneLoaded(Scene loadedScene, LoadSceneMode sceneLoadMode)
-    {
-        if (loadedScene.name == "Game")
+        if (RunnerPrefab != null)
         {
-            SpawnBall();
-
-            if (CurrentGameMode == GameMode.PvP)
-            {
-                SpawnPlayersOffline();
-            }
-            else if (CurrentGameMode == GameMode.PvE)
-            {
-                SpawnPlayersOffline(1);
-                SpawnAI();
-            }
-            else if (CurrentGameMode == GameMode.EvE)
-            {
-                SpawnAI(2);
-            }
+            Destroy(RunnerPrefab.gameObject);
         }
-    }
-
-    public void StartGameOffline(GameMode mode, string maxPoint, AIDifficulty difficulty)
-    {
-        CurrentGameMode = mode;
-        int.TryParse(maxPoint, out int points);
-        GameRequiredPoints = points;
-        AIDifficulty = difficulty;
-        SceneManager.LoadScene("Game");
     }
 
     public void ResetGame()
@@ -283,6 +307,7 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
 
         /// Host renames the GameObject for themselfs.
         nObj.gameObject.name = $"Player {playerRef.PlayerId}";
+        nObj.tag = $"Paddle{playerRef.PlayerId}";
 
         return nObj;
     }
@@ -309,23 +334,15 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
     /// Spawns AI.
     /// </summary>
     /// <param name="amount">How many to spawn?</param>
-    void SpawnAI(int amount = 1)
+    public void SpawnAI(int amount = 1)
     {
         for (int i = 0; i < amount; i++)
         {
-            Vector3 aiSpawnPoint;
-            if (amount == 1)
-            {
-                aiSpawnPoint = SpawnPointManager.Instance.SpawnPoint2;
-            }
-            else
-            {
-                aiSpawnPoint = i == 0 ? SpawnPointManager.Instance.SpawnPoint1 : SpawnPointManager.Instance.SpawnPoint2;
-            }
+            Vector3 aiSpawnPoint = amount == 1 ? SpawnPointManager.Instance.SpawnPoint2 : i == 0 ? SpawnPointManager.Instance.SpawnPoint1 : SpawnPointManager.Instance.SpawnPoint2;
 
             GameObject aiObject = Instantiate(AIPrefab, aiSpawnPoint, Quaternion.identity);
             aiObject.name = $"AI {i + 1}";
-            aiObject.tag = $"Paddle{i + 1}";
+            aiObject.tag = $"Paddle{2}";
 
             if (!aiObject.TryGetComponent(out AIController aiController))
             {
@@ -400,7 +417,15 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
             /// Cache the NetworkObject for later use.
             _spawnedPlayers.Add(player, spawnedPlayer);
 
-            CheckPlayerCount(runner);
+            if (IsOnline)
+            {
+                CheckPlayerCount(runner);
+            }
+            else
+            {
+                bl_EventHandler.Match.DispatchWaitingStatus(false);
+                bl_EventHandler.Match.DispatchTimerStart();
+            }
         }
     }
 

@@ -158,6 +158,12 @@ public class GameTimer : NetworkBehaviour
             if (Runner.IsServer)
             {
                 GameController.Instance.SpawnBall();
+
+                /// If we are playing against AI, spawn AI.
+                if (GameController.Instance.CurrentGameMode == GameMode.PvE)
+                {
+                    GameController.Instance.SpawnAI();
+                }
             }
 
             _startTimerExpired = true;
@@ -175,7 +181,7 @@ public class GameTimer : NetworkBehaviour
             StartingText.text = $"STARTING IN {time}";
         }
 
-        if (_roundStart)
+        if (_roundStart && !_isGameDone)
         {
             int elapsedTicks = Runner.Tick - _initialTick;
 
@@ -186,6 +192,11 @@ public class GameTimer : NetworkBehaviour
             //Debug.LogWarning($"Round has been played for {formattedTime}");
 
             RoundTimer.text = formattedTime;
+        }
+
+        if (_isGameDone)
+        {
+            RoundTimer.gameObject.SetActive(false);
         }
     }
 
