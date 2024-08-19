@@ -22,4 +22,5 @@ Currently, the game supports multiplayer using Photon Fusion 2 & versus AI.
 ## Installation
 1. Clone this repository: `git clone https://github.com/j0pezzz/pong-clone.git`
 2. Open the project in Unity.
-3. Click on the play button to start the game.
+3. Make sure to use your own Photon AppID.
+4. Click on the play button to start the game.
