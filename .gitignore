@@ -9,6 +9,7 @@
 [Bb]uilds/
 [Ll]ogs/
 [Uu]ser[Ss]ettings/
+/Ping Clone/Assets/Photon/Fusion/Resources/PhotonAppSettings.asset
 venv/
 
 # MemoryCaptures can get excessive in size.
