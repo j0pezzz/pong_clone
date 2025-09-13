@@ -2,8 +2,8 @@
 
 ## Description
 This is a simple clone of the classic Pong game. 
-The game is developed in Unity and it's a great way to learn about game development and Unity. 
-Currently, the game supports multiplayer using Photon Fusion 2 & versus AI.
+The game is developed using Unity and Photon Fusion. 
+Game supports multiplayer & AI opponent.
 
 ## Features
 - Classic Pong gameplay: Control your paddle and play against another player.
