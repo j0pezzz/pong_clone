@@ -77,7 +77,7 @@ public class AI_Train : Agent
         if (mapPrefabs.Ball != null)
         {
             sensor.AddObservation(mapPrefabs.Ball.transform.localPosition);
-            sensor.AddObservation(ballRigidbody.velocity);
+            sensor.AddObservation(ballRigidbody.linearVelocity);
         }
     }
 

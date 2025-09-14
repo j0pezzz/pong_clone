@@ -48,7 +48,7 @@ public class AIController : Agent
         if (ball != null)
         {
             sensor.AddObservation(ball.transform.localPosition);
-            sensor.AddObservation(ballRigidbody.velocity);
+            sensor.AddObservation(ballRigidbody.linearVelocity);
         }
     }
 

@@ -41,7 +41,7 @@ public class Ball : NetworkBehaviour
 
         if (GameTimer.Instance.IsGameDone > 0)
         {
-            rb.velocity = Vector3.zero;
+            rb.linearVelocity = Vector3.zero;
         }
 
         if (_initialLaunchDone)
@@ -68,12 +68,12 @@ public class Ball : NetworkBehaviour
     {
         if (paused)
         {
-            pausedVelocity = rb.velocity;
-            rb.velocity = Vector3.zero;
+            pausedVelocity = rb.linearVelocity;
+            rb.linearVelocity = Vector3.zero;
         }
         else
         {
-            rb.velocity = pausedVelocity;
+            rb.linearVelocity = pausedVelocity;
         }
     }
 
@@ -96,7 +96,7 @@ public class Ball : NetworkBehaviour
 
         Vector3 launchDir = new Vector3(xDir, yDir, 0).normalized;
 
-        rb.velocity = launchDir * Speed;
+        rb.linearVelocity = launchDir * Speed;
     }
 
     void OnCollisionEnter(Collision collision)
@@ -111,7 +111,7 @@ public class Ball : NetworkBehaviour
 
             Vector2 direction = new Vector2(1, y).normalized;
 
-            rb.velocity = direction * Speed;
+            rb.linearVelocity = direction * Speed;
         }
         else if (collision.gameObject.CompareTag("Paddle2"))
         {
@@ -119,7 +119,7 @@ public class Ball : NetworkBehaviour
 
             Vector2 direction = new Vector2(-1, y).normalized;
 
-            rb.velocity = direction * Speed;
+            rb.linearVelocity = direction * Speed;
         }
     }
 
