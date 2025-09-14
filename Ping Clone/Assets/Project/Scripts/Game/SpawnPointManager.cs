@@ -1,8 +1,10 @@
+using Project.Scripts.Game;
 using UnityEngine;
 
 public class SpawnPointManager : MonoBehaviour
 {
     //TODO: Need to make spawnpoint implementation better.
+    public SpawnPoint[] spawnPoints;
     public Vector3 SpawnPoint1;
     public Vector3 SpawnPoint2;
 

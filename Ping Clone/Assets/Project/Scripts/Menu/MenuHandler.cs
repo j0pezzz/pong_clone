@@ -1,6 +1,8 @@
 using System;
+using Project.Internal.Game;
 using TMPro;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 public class MenuHandler : Fusion.Behaviour
 {
@@ -18,7 +20,7 @@ public class MenuHandler : Fusion.Behaviour
     [SerializeField] GameObject NoRoomUI;
     [SerializeField] TextMeshProUGUI ErrorMessage;
 
-    GameMode cacheGameMode;
+    GameMode _cacheGameMode;
 
     void OnEnable()
     {
@@ -84,9 +86,9 @@ public class MenuHandler : Fusion.Behaviour
 
     public void SetGameMode(string gameMode) 
     { 
-        cacheGameMode = (GameMode)Enum.Parse(typeof(GameMode), gameMode);
-        ChooseScreen.SetActive(cacheGameMode == GameMode.PvP);
-        MatchSettings.SetActive(cacheGameMode == GameMode.PvE);
+        _cacheGameMode = (GameMode)Enum.Parse(typeof(GameMode), gameMode);
+        ChooseScreen.SetActive(_cacheGameMode == GameMode.PvP);
+        MatchSettings.SetActive(_cacheGameMode == GameMode.PvE);
     }
 
     public void PlayGame()
@@ -96,10 +98,11 @@ public class MenuHandler : Fusion.Behaviour
         if (!GameController.Instance.IsOnline)
         {
             AIDifficulty difficulty = (AIDifficulty)aiDifficulty.value;
-            StartCoroutine(GameController.Instance.CreateRoomLocally(cacheGameMode, points, difficulty));
+            StartCoroutine(GameController.Instance.CreateRoomLocally(_cacheGameMode, points, difficulty));
         }
         else
         {
+            GameController.Instance.PlayerData.Team = Team.Team1;
             StartCoroutine(GameController.Instance.HostRoom(points));
         }
     }
@@ -137,7 +140,7 @@ public class MenuHandler : Fusion.Behaviour
         else
         {
             JoinRoomContent.SetActive(false);
-
+            GameController.Instance.PlayerData.Team = Team.Team2;
             StartCoroutine(GameController.Instance.JoinRoom(SessionName.text));
         }
     }

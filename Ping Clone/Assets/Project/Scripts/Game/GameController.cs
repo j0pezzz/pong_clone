@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Project.Internal.Game;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -13,7 +14,6 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
     public GameObject PlayerController;
     public GameObject AIPrefab;
     public GameObject BallPrefab;
-    public NetworkRunner RunnerPrefab;
     [ScenePath]
     public string InitialScenePath;
 
@@ -45,6 +45,8 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
     Vector3 spawnPoint;
 
     Dictionary<PlayerRef, NetworkObject> _spawnedPlayers = new();
+    [NonSerialized] NetworkRunner _serverRunner, _lobbyRunner, _clientRunner;
+    public PlayerData PlayerData;
     #endregion
 
     void Awake()
@@ -57,50 +59,45 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
 
         DontDestroyOnLoad(gameObject);
         Instance = this;
+        PlayerData = new PlayerData
+        {
+            Nickname = $"Player {UnityEngine.Random.Range(1, 1000)}"
+        };
     }
 
     public void StartRunner()
     {
         IsOnline = true;
-        if (RunnerPrefab == null)
-        {
-            RunnerPrefab = FindObjectOfType<NetworkRunner>();
-        }
-
-        RunnerPrefab = Instantiate(RunnerPrefab);
-        DontDestroyOnLoad(RunnerPrefab);
-        RunnerPrefab.name = "Temp Network Runner";
+        
+        _lobbyRunner = Instantiate(GameData.Instance.runnerPrefab);
+        DontDestroyOnLoad(_lobbyRunner);
+        _lobbyRunner.name = "Lobby NetworkRunner";
         bl_EventHandler.Network.DispatchOnlineStatus(true);
     }
 
     public void StartOfflineRunner()
     {
         IsOnline = false;
-        if (RunnerPrefab == null)
-        {
-            RunnerPrefab = FindObjectOfType<NetworkRunner>();
-        }
 
-        RunnerPrefab = Instantiate(RunnerPrefab);
-        DontDestroyOnLoad(RunnerPrefab);
-        RunnerPrefab.name = "Temp Network Runner";
+        _lobbyRunner = Instantiate(GameData.Instance.runnerPrefab);
+        DontDestroyOnLoad(_lobbyRunner);
+        _lobbyRunner.name = "Lobby NetworkRunner";
     }
 
     public void StopRunner()
     {
         IsOnline = false;
-        Destroy(RunnerPrefab.gameObject);
+        ShutdownAll();
         bl_EventHandler.Network.DispatchOnlineStatus(false);
     }
 
     public System.Collections.IEnumerator HostRoom(string points)
     {
         int.TryParse(points, out int requiredPoints);
-        string sessionName = UnityEngine.Random.Range(0, 99999).ToString();
-        Debug.LogWarning($"GameController (HostRoom): genereted session name={sessionName}");
+        string sessionName = $"Session{UnityEngine.Random.Range(0, 99999).ToString()}";
 
-        _server = Instantiate(RunnerPrefab);
-        _server.name = Fusion.GameMode.Host.ToString();
+        _server = Instantiate(GameData.Instance.runnerPrefab);
+        _server.name = $"Host - {PlayerData.Nickname}";
 
         SceneRef sceneRef = SceneRef.FromIndex(SceneUtility.GetBuildIndexByScenePath(InitialScenePath));
 
@@ -108,22 +105,26 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
 
         bl_EventHandler.Menu.DispatchRoomCreate(true);
 
-        while (!serverTask.IsCompleted) yield return null;
+        yield return new WaitUntil(() => serverTask.IsCompleted);
 
-        if (serverTask.IsFaulted)
+        if (serverTask.IsFaulted || serverTask.IsFaulted)
         {
-            Debug.LogError($"GameController (HostRoom): {serverTask.Exception}");
+            Log.Error($"GameController (HostRoom): {serverTask.Exception}");
+            ShutdownAll();
+            yield break;
+        }
 
+        if (!_server)
+        {
             ShutdownAll();
             yield break;
         }
 
         bl_EventHandler.Menu.DispatchRoomCreate(false);
 
-        Debug.LogWarning($"GameController (HostRoom): NetworkRunner {_server.name} is initialized");
+        Log.Info($"{_server.name} Network Runner is initialized");
 
         SessionInfo = _server.SessionInfo;
-
         GameRequiredPoints = requiredPoints;
 
         yield return new WaitForEndOfFrame();
@@ -131,28 +132,20 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
 
     public System.Collections.IEnumerator JoinRoom(string sessionName)
     {
-        NetworkRunner client = Instantiate(RunnerPrefab);
+        NetworkRunner client = Instantiate(GameData.Instance.runnerPrefab);
         DontDestroyOnLoad(client);
 
-        client.name = $"Client {UnityEngine.Random.Range(1, 9999)}";
+        client.name = $"Client - {PlayerData.Nickname}";
 
         SceneRef sceneRef = SceneRef.FromIndex(SceneUtility.GetBuildIndexByScenePath(InitialScenePath));
 
         Task joinTask = InitializeRunner(client, Fusion.GameMode.Client, NetAddress.Any(), sceneRef, sessionName);
 
         bl_EventHandler.Menu.DispatchRoomJoin(true);
+        
+        yield return new WaitUntil(() => joinTask.IsCompleted);
 
-        while (!joinTask.IsCompleted) yield return null;
-
-        if (joinTask.IsFaulted)
-        {
-            Debug.LogError($"GameController (JoinRoom): {joinTask.Exception}");
-
-            ShutdownAll();
-            yield break;
-        }
-
-        if (joinTask.IsCanceled)
+        if (joinTask.IsCanceled || joinTask.IsFaulted)
         {
             Debug.LogError($"GameController (JoinRoom): {joinTask.Exception}");
 
@@ -161,7 +154,6 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
         }
 
         bl_EventHandler.Menu.DispatchRoomJoin(false);
-
         yield return new WaitForEndOfFrame();
     }
 
@@ -170,10 +162,10 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
     {
         int.TryParse(points, out int requiredPoints);
         string sessionName = UnityEngine.Random.Range(0, 99999).ToString();
-        Debug.LogWarning($"GameController (CreateRoomLocally): genereted session name={sessionName}");
+        Debug.LogWarning($"GameController (CreateRoomLocally): Generated session name={sessionName}");
 
-        _server = Instantiate(RunnerPrefab);
-        _server.name = Fusion.GameMode.Single.ToString();
+        _server = Instantiate(GameData.Instance.runnerPrefab);
+        _server.name = nameof(Fusion.GameMode.Single);
 
         SceneRef sceneRef = SceneRef.FromIndex(SceneUtility.GetBuildIndexByScenePath(InitialScenePath));
 
@@ -203,8 +195,10 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
 
         yield return new WaitForEndOfFrame();
     }
+    
+    NetworkSceneInfo _networkSceneInfo;
 
-    protected async Task InitializeRunner(NetworkRunner runner, Fusion.GameMode gameMode, NetAddress address, SceneRef sceneRef, string sessionName)
+    async Task InitializeRunner(NetworkRunner runner, Fusion.GameMode gameMode, NetAddress address, SceneRef sceneRef, string sessionName)
     {
         runner.TryGetComponent(out INetworkSceneManager sceneManager);
         if (sceneManager == null)
@@ -220,51 +214,36 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
             objectProvider = runner.gameObject.AddComponent<NetworkObjectProviderDefault>();
         }
 
-        /// If using this implementation, Server needs to load that scene once Session created ??
-        /*
-        NetworkSceneInfo sceneInfo = new();
-        if (sceneRef.IsValid)
-        {
-            sceneInfo.AddSceneRef(sceneRef, LoadSceneMode.Additive);
-        }*/
-
+        _networkSceneInfo.AddSceneRef(sceneRef);
+        
         runner.AddCallbacks(this);
 
         StartGameResult result = await runner.StartGame(new StartGameArgs
         {
             GameMode = gameMode,
             Address = address,
-            Scene = sceneRef,
+            Scene = _networkSceneInfo,
             SessionName = sessionName,
             SceneManager = sceneManager,
             ObjectProvider = objectProvider,
         });
 
-        if (!result.Ok)
-        {
-            Debug.LogError($"GameController (InitializeRunner): {result.ShutdownReason}");
-            if (result.ShutdownReason == ShutdownReason.GameNotFound)
-            {
-                bl_EventHandler.Menu.DispatchNoRoomToJoin(result.ErrorMessage);
-            }
+        if (result.Ok) return;
 
-            ShutdownAll();
+        Debug.LogError($"GameController (InitializeRunner): {result.ShutdownReason}");
+        if (result.ShutdownReason == ShutdownReason.GameNotFound)
+        {
+            bl_EventHandler.Menu.DispatchNoRoomToJoin(result.ErrorMessage);
         }
+
+        ShutdownAll();
     }
 
     public void ShutdownAll()
     {
-        foreach (NetworkRunner runner in NetworkRunner.Instances.ToList())
+        foreach (NetworkRunner runner in NetworkRunner.Instances.ToList().Where(runner => runner && runner.IsRunning))
         {
-            if (runner != null && runner.IsRunning)
-            {
-                runner.Shutdown();
-            }
-        }
-
-        if (RunnerPrefab != null)
-        {
-            Destroy(RunnerPrefab.gameObject);
+            runner.Shutdown();
         }
     }
 
@@ -295,17 +274,17 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
 
     NetworkObject SpawnPlayerOnline(PlayerRef playerRef)
     {
-        /// Get spawnpoint based on PlayerId. Host will be always 1 so he will get SpawnPoint1 and Client SpawnPoint2.
+        // Get spawnpoint based on PlayerId. Host will be always 1 so he will get SpawnPoint1 and Client SpawnPoint2.
         spawnPoint = playerRef.PlayerId == 1 ? SpawnPointManager.Instance.SpawnPoint1 : SpawnPointManager.Instance.SpawnPoint2;
 
         string spawnpoint = spawnPoint == SpawnPointManager.Instance.SpawnPoint1 ? "SpawnPoint 1" : "SpawnPoint 2";
 
         Debug.LogWarning($"GameController (SpawnPlayerOnline): spawning Player {playerRef.PlayerId} to {spawnpoint}");
 
-        /// Might need to use 'SpawnAsync' instead of 'Spawn'.
+        // Might need to use 'SpawnAsync' instead of 'Spawn'.
         NetworkObject nObj = _server.Spawn(PlayerController, spawnPoint, Quaternion.identity, playerRef);
 
-        /// Host renames the GameObject for themselfs.
+        // Host renames the GameObject for themselfs.
         nObj.gameObject.name = $"Player {playerRef.PlayerId}";
         nObj.tag = $"Paddle{playerRef.PlayerId}";
 
@@ -407,14 +386,20 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
         Debug.LogWarning($"GameController (OnPlayerJoined): Player {player.PlayerId} joined!");
         Debug.LogWarning($"GameController (OnPlayerJoined): Are we server? {runner.IsServer}");
 
-        /// If we are the Host, we spawn player characters.
-        if (runner.IsServer)
+        if (Runner.LocalPlayer == player)
+        {
+            Log.Info("We have successfully connected to server, letting server know!");
+            RPC_Connected(PlayerData, player);
+        }
+
+        // If we are the Host, we spawn player characters.
+        /*if (runner.IsServer)
         {
             NetworkObject spawnedPlayer = SpawnPlayerOnline(player);
 
             runner.SetPlayerObject(player, spawnedPlayer);
 
-            /// Cache the NetworkObject for later use.
+            // Cache the NetworkObject for later use.
             _spawnedPlayers.Add(player, spawnedPlayer);
 
             if (IsOnline)
@@ -426,12 +411,19 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
                 bl_EventHandler.Match.DispatchWaitingStatus(false);
                 bl_EventHandler.Match.DispatchTimerStart();
             }
-        }
+        }*/
+    }
+
+    //TODO: need to figure out why this isn't able to take a INetworkStruct.
+    [Rpc(RpcSources.All, RpcTargets.InputAuthority)]
+    void RPC_Connected(PlayerData playerData, PlayerRef playerRef)
+    {
+        Log.Info($"{playerData.Nickname} - {playerRef.PlayerId} is ready to be spawned!");
     }
 
     public void OnPlayerLeft(NetworkRunner runner, PlayerRef player)
     {
-        /// Despawn the NetworkObject and remove it from the Dictionary.
+        // Despawn the NetworkObject and remove it from the Dictionary.
         if (_spawnedPlayers.TryGetValue(player, out NetworkObject nObj))
         {
             runner.Despawn(nObj);
@@ -440,8 +432,8 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
 
         if (runner.IsServer)
         {
-            /// Since a player left, it means we the Host are alone.
-            /// We should give the Host an option to either leave the session or start the match again.
+            // Since a player left, it means we the Host are alone.
+            // We should give the Host an option to either leave the session or start the match again.
             bl_EventHandler.Match.DispatchPauseEvent(true);
             GameUI.Instance.PlayerLeft.SetActive(true);
 
@@ -458,12 +450,12 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
     {
         NetworkInputData data = new();
 
-        /// W & S controls.
+        // W & S controls.
         data.Buttons.Set(Buttons.Up, Input.GetKey(KeyCode.W));
         data.Buttons.Set(Buttons.Down, Input.GetKey(KeyCode.S));
 
-        /// If calling Arrow controls after W & S controls, only Arrow controls will work.
-        /// Up & Down Arrow controls.
+        // If calling Arrow controls after W & S controls, only Arrow controls will work.
+        // Up & Down Arrow controls.
         //data.Buttons.Set(Buttons.Up, Input.GetKey(KeyCode.UpArrow));
         //data.Buttons.Set(Buttons.Down, Input.GetKey(KeyCode.DownArrow));
 
@@ -472,7 +464,7 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
 
     public void OnShutdown(NetworkRunner runner, ShutdownReason shutdownReason)
     {
-        /// Since the NetworkRunner has been Shutdown, we just load the MainMenu.
+        // Since the NetworkRunner has been Shutdown, we just load the MainMenu.
         ShutdownAll();
         SceneManager.LoadScene("MainMenu");
     }
