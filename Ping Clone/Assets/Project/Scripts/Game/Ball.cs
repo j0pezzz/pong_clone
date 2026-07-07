@@ -39,14 +39,15 @@ public class Ball : NetworkBehaviour
     {
         if (GameController.Instance == null) return;
 
-        if (GameTimer.Instance.IsGameDone > 0)
+        if (GameTimer.Instance.IsGameDone)
         {
             rb.linearVelocity = Vector3.zero;
+            return;
         }
 
         if (_initialLaunchDone)
         {
-            elapsedTime = (Runner.Tick - GameTimer._initialTick) / (float)Runner.TickRate;
+            elapsedTime = (Runner.Tick - GameTimer.InitialTick) / (float)Runner.TickRate;
 
             if (elapsedTime - _lastSpeedIncrementTime >= SpeedIncrement)
             {
@@ -103,7 +104,7 @@ public class Ball : NetworkBehaviour
     {
         if (!Runner.IsServer) return;
 
-        if (GameTimer.Instance != null && GameTimer.Instance.IsGameDone > 0) return;
+        if (GameTimer.Instance != null && GameTimer.Instance.IsGameDone) return;
 
         if (collision.gameObject.CompareTag("Paddle1"))
         {
@@ -129,7 +130,7 @@ public class Ball : NetworkBehaviour
     {
         if (!Runner.IsServer) return;
 
-        if (GameTimer.Instance != null && GameTimer.Instance.IsGameDone > 0) return;
+        if (GameTimer.Instance != null && GameTimer.Instance.IsGameDone) return;
 
         Team scoringTeam = GetScoringTeam(other.gameObject.tag);
 

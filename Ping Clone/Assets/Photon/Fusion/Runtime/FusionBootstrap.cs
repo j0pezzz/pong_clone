@@ -49,12 +49,19 @@ namespace Fusion {
       public string RoomName;
       public SceneRef InitialScene;
       public int ClientCount;
+      public bool IsShared;
 
       public override void Execute() { 
         Instance = this;
       }
 
       public static StartCommand Instance;
+      
+      // reset static fields to allow to disable domain reload
+      [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+      private static void ResetStaticFields() {
+        Instance = null;
+      }
     }
 
     /// <summary>
@@ -90,7 +97,7 @@ namespace Fusion {
     public bool AutoHideGUI = true;
 
     /// <summary>
-    /// The number of client <see cref="NetworkRunner"/> instances that will be created if running in Mulit-Peer Mode. 
+    /// The number of client <see cref="NetworkRunner"/> instances that will be created if running in Multi-Peer Mode. 
     /// When using the Select start mode, this number will be the default value for the additional clients option box.
     /// </summary>
     [InlineHelp]
@@ -127,7 +134,10 @@ namespace Fusion {
     public string InitialScenePath;
     
     // TODO: this is debt
+    // Project Auditor: Static field not reset, field is reset but project auditor says a false positive.
+#pragma warning disable UDR0002 
     static string _initialScenePath;
+#pragma warning restore UDR0002
     
     /// <summary>
     /// Indicates which step of the startup process <see cref="FusionBootstrap"/> is currently in.
@@ -181,6 +191,11 @@ namespace Fusion {
     protected bool UsingMultiPeerMode => NetworkProjectConfig.Global.PeerMode == NetworkProjectConfig.PeerModes.Multiple;
     protected bool ShowAutoClients    => UsingMultiPeerMode && (StartMode == StartModes.UserInterface || (StartMode == StartModes.Automatic && AutoStartAs != GameMode.Single));
 
+    // reset static fields to allow to disable domain reload
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStaticFields() {
+      _initialScenePath = null;
+    }
 
 #if UNITY_EDITOR
     protected virtual void Reset() {
@@ -213,7 +228,7 @@ namespace Fusion {
       var config      = NetworkProjectConfig.Global;
       var isMultiPeer = config.PeerMode == NetworkProjectConfig.PeerModes.Multiple;
 
-      var existingRunner = FindFirstObjectByType<NetworkRunner>();
+      var existingRunner = FindAnyObjectByType<NetworkRunner>();
 
       if (existingRunner && existingRunner != RunnerPrefab) {
         if (existingRunner.State != NetworkRunner.States.Shutdown) {
@@ -494,7 +509,12 @@ namespace Fusion {
 
       // If NDS is starting more than 1 shared or auto client, they need to use the same Session Name, otherwise, they will end up on different Rooms
       // as Fusion creates a Random Session Name when no name is passed on the args
-      if (string.IsNullOrEmpty(DefaultRoomName)) {
+      var localMultipeerCheck = (serverMode == GameMode.Shared || serverMode == GameMode.AutoHostOrClient || serverMode == GameMode.Server || serverMode == GameMode.Host) &&
+                                clientCount     > 1                                                                                                                        &&
+                                config.PeerMode == NetworkProjectConfig.PeerModes.Multiple;
+      var isMppmMainInstance = FusionMppm.Status == FusionMppmStatus.MainInstance;
+      
+      if ((localMultipeerCheck || isMppmMainInstance) && string.IsNullOrEmpty(DefaultRoomName)) {
         DefaultRoomName = Guid.NewGuid().ToString();
         Debug.Log($"Generated Session Name: {DefaultRoomName}");
       }
@@ -540,10 +560,11 @@ namespace Fusion {
         if (VirtualInstanceConnectDelay > 0) {
           yield return new WaitForSecondsRealtime(VirtualInstanceConnectDelay);
         }
-        FusionMppm.Broadcast(new StartCommand {
+        FusionMppm.MainEditor?.Send(new StartCommand {
           RoomName = DefaultRoomName,
           InitialScene = sceneRef,
-          ClientCount =  1
+          ClientCount =  1,
+          IsShared = serverMode == GameMode.Shared
         });
       }
     }
@@ -557,7 +578,7 @@ namespace Fusion {
       StartCommand.Instance = null;
       
       DefaultRoomName = command.RoomName;
-      yield return StartClients(command.ClientCount, GameMode.Client, command.InitialScene);
+      yield return StartClients(command.ClientCount, command.IsShared ? GameMode.Shared : GameMode.Client, command.InitialScene);
     }
 
     [EditorButton("Add Additional Client", EditorButtonVisibility.PlayMode)]
@@ -665,5 +686,41 @@ namespace Fusion {
     /// </summary>
     public bool ShouldShowGUI => StartMode == StartModes.UserInterface &&
                                  !(AutoConnectVirtualInstances && FusionMppm.Status == FusionMppmStatus.VirtualInstance);
+
+#if UNITY_2022_2_OR_NEWER
+
+    private void Update() {
+      if (NetworkProjectConfig.Global.PeerMode != NetworkProjectConfig.PeerModes.Multiple)
+        return;
+
+      foreach (var runner in NetworkRunner.Instances) {
+        var scene = runner.GetPhysicsScene();
+
+        if (scene.IsValid() &&
+          Physics.simulationMode != SimulationMode.Script &&
+          scene != Physics.defaultPhysicsScene) {
+            scene.InterpolateBodies();
+        }
+      }
+    }
+
+    private void FixedUpdate() {
+      if (NetworkProjectConfig.Global.PeerMode != NetworkProjectConfig.PeerModes.Multiple)
+        return;
+
+      foreach (var runner in NetworkRunner.Instances) {
+        var scene = runner.GetPhysicsScene();
+
+        if (scene.IsValid() &&
+          Physics.simulationMode != SimulationMode.Script &&
+          scene != Physics.defaultPhysicsScene) {
+            scene.ResetInterpolationPoses();
+        }
+      }
+    }
+
+#endif
+
+
   }
 }

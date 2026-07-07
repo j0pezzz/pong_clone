@@ -6,8 +6,8 @@ using UnityEngine.SceneManagement;
 public class GameTimer : NetworkBehaviour
 {
     [Networked] public TickTimer StartTimer { get; set; }
-    [Networked] public int IsGamePaused { get; set; }
-    [Networked] public int IsGameDone { get; set; }
+    [Networked] public NetworkBool IsGamePaused { get; set; }
+    [Networked] public NetworkBool IsGameDone { get; set; }
     [Networked] public int RequiredPoints { get; set; }
     [Networked, OnChangedRender(nameof(Team1PointsChanged))] public int Player1Points { get; private set; }
     [Networked, OnChangedRender(nameof(Team2PointsChanged))] public int Player2Points { get; private set; }
@@ -15,25 +15,9 @@ public class GameTimer : NetworkBehaviour
     [SerializeField] TextMeshProUGUI StartingText;
     [SerializeField] TextMeshProUGUI RoundTimer;
 
-    public static int _initialTick;
-    bool _roundStart = false;
-
-    bool _startTimerExpired = false;
-    bool isGamePaused
-    {
-        get => IsGamePaused > 0;
-        set => IsGamePaused = IsGamePaused >= 0 ?
-            value ? IsGamePaused + 1 : -(IsGamePaused + 1) :
-            value ? -(IsGamePaused - 1) : IsGamePaused - 1;
-    }
-
-    bool _isGameDone
-    {
-        get => IsGameDone > 0;
-        set => IsGameDone = IsGameDone >= 0 ?
-            value ? IsGameDone + 1 : -(IsGameDone + 1) :
-            value ? -(IsGameDone - 1) : IsGameDone - 1;
-    }
+    public static int InitialTick;
+    bool _roundStart;
+    bool _startTimerExpired;
 
     static GameTimer _instance;
     public static GameTimer Instance
@@ -52,12 +36,11 @@ public class GameTimer : NetworkBehaviour
 
         if (Runner.IsServer)
         {
-            _isGameDone = false;
+            IsGameDone = false;
             RequiredPoints = GameController.GameRequiredPoints;
         }
 
         bl_EventHandler.Match.DispatchGamePoints(RequiredPoints);
-        Debug.LogWarning("GameTimer spawned!");
     }
 
     public override void Despawned(NetworkRunner runner, bool hasState)
@@ -93,13 +76,13 @@ public class GameTimer : NetworkBehaviour
 
     public void CheckTeamScore()
     {
-        if (isGamePaused) return;
+        if (IsGamePaused) return;
 
         if (Player1Points >= RequiredPoints || Player2Points >= RequiredPoints)
         {
-            _isGameDone = true;
+            IsGameDone = true;
 
-            /// Get the winner and send an RPC to both players that the game is done.
+            // Get the winner and send an RPC to both players that the game is done.
             Team winningTeam = DetermineWinner();
             RPC_GameFinish(winningTeam);
         }
@@ -128,7 +111,7 @@ public class GameTimer : NetworkBehaviour
 
     void OnPause(bool pause)
     {
-        isGamePaused = pause;
+        IsGamePaused = pause;
     }
 
     void OnTimerStart()
@@ -139,7 +122,7 @@ public class GameTimer : NetworkBehaviour
 
     public void RoundStart()
     {
-        _initialTick = Runner.Tick;
+        InitialTick = Runner.Tick;
         if (!_roundStart) _roundStart = true;
         RoundTimer.gameObject.SetActive(true);
     }
@@ -159,7 +142,7 @@ public class GameTimer : NetworkBehaviour
             {
                 GameController.Instance.SpawnBall();
 
-                /// If we are playing against AI, spawn AI.
+                // If we are playing against AI, spawn AI.
                 if (GameController.Instance.CurrentGameMode == GameMode.PvE)
                 {
                     GameController.Instance.SpawnAI();
@@ -177,13 +160,13 @@ public class GameTimer : NetworkBehaviour
             if (!Content.activeInHierarchy) Content.SetActive(true);
 
             //Debug.LogWarning("GameTimer (Render): Start Timer running.");
-            string time = StringUtility.GetTimeFormat((int)StartTimer.RemainingTicks(Runner));
+            string time = StringUtility.GetTimeFormat(StartTimer.RemainingTicks(Runner).GetValueOrDefault(0));
             StartingText.text = $"STARTING IN {time}";
         }
 
-        if (_roundStart && !_isGameDone)
+        if (_roundStart && !IsGameDone)
         {
-            int elapsedTicks = Runner.Tick - _initialTick;
+            int elapsedTicks = Runner.Tick - InitialTick;
 
             float elapsedTime = elapsedTicks / (float)Runner.TickRate;
 
@@ -194,7 +177,7 @@ public class GameTimer : NetworkBehaviour
             RoundTimer.text = formattedTime;
         }
 
-        if (_isGameDone)
+        if (IsGameDone)
         {
             RoundTimer.gameObject.SetActive(false);
         }

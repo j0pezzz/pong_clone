@@ -1,17 +1,21 @@
 namespace Fusion.Editor {
   using System;
   using System.Collections.Generic;
+  using Statistics;
   using UnityEngine;
   using UnityEditor;
 
   /// <summary>
   /// This window contains controls for each active NetworkRunner (see Multi-Peer) including
   /// UI toggles for runner SetVisible() and ProvideInput members. NetworkRunner and Player Objects can be pinged in the hierarchy.
+  /// FusionStats creation shortcuts are provided for convenience as well.
   /// </summary>
   public class FusionRunnerVisibilityControlsWindow : EditorWindow {
     private const int WINDOW_MIN_W = 82;
     private const int WINDOW_MIN_H = 48;
 
+    private const int STATS_BTTN_WIDE = 66;
+    private const int STATS_BTTN_SLIM = 34;
     private const int RUNNR_BTTN_WIDE = 60;
     private const int RUNNR_BTTN_SLIM = 24;
     private const int FONT_SIZE = 9;
@@ -32,8 +36,8 @@ namespace Fusion.Editor {
       public const string Dash = "--";
       public const string ProvidingInputs = "\u2002Providing Inputs";
       public const string NoInputs = "\u2002(No Inputs)";
-      public const string ArrowsLeft = "<<";
-      public const string ArrowsRight = ">>";
+      public const string StatsFull = "Statistics";
+      public const string StatsShort = "Stats";
       public const string UserID = "UserID: ";
 
       public const string VisibilityTooltip =
@@ -42,6 +46,7 @@ namespace Fusion.Editor {
       public const string InputTooltip =
         "This button toggles NetworkRunner.ProvideInput for this NetworkRunner. If [Shift] is held while clicking all other active runners will have NetworkRunner.ProvideInput set to false, soloing this runner.";
 
+      public const string StatsTooltip = "Clicking this button at runtime will create a Fusion Statistics panel associated with this NetworkRunner.";
       public const string RunnerTooltip = "The name of the NetworkRunner this row controls. Clicking this button will ping the NetworkRunner GameObject in the hierarchy.";
 
       public const string PlayerObjTooltip =
@@ -99,6 +104,7 @@ namespace Fusion.Editor {
 
     private static Lazy<GUIContent> s_noVisibilityWarn = new Lazy<GUIContent>(() => new GUIContent(FusionEditorSkin.WarningIcon, Labels.NoVisibilityWarn));
 
+    private static Lazy<GUIContent> s_statsGC = new Lazy<GUIContent>(() => new GUIContent(string.Empty, Labels.StatsTooltip));
     private GUIStyle _toolbarButtonStyle;
 
     /// <summary>
@@ -109,6 +115,7 @@ namespace Fusion.Editor {
     private Vector2 _scrollPosition;
     private double _lastRepaintTime;
 
+    private readonly Dictionary<NetworkRunner, FusionStatistics> _stats = new();
     /// <summary>
     /// Create window instance.
     /// </summary>
@@ -275,6 +282,16 @@ namespace Fusion.Editor {
               }
             }
           }
+          
+          // Draw runtime stats creation buttons. Reflection used since this namespace can't see FusionStats.
+          if (currentViewWidth >= WINDOW_MIN_W + 10) {
+            var statsRect  = EditorGUILayout.GetControlRect(GUILayout.Width(isWide ? STATS_BTTN_WIDE : STATS_BTTN_SLIM));
+            var statsGC        = s_statsGC.Value;
+            statsGC.text = isWide ? Labels.StatsFull : Labels.StatsShort;
+            if (GUI.Button(statsRect, statsGC, s_buttonStyle.Value)) {
+              CreateOrDestroyFusionStats(runner);
+            }
+          }
 
           // Draw UserID
           if (currentViewWidth > 600) {
@@ -287,6 +304,23 @@ namespace Fusion.Editor {
         }
 
         EditorGUILayout.EndHorizontal();
+      }
+    }
+    
+    private void CreateOrDestroyFusionStats(NetworkRunner runner) {
+      // stats were destroyed by other means.
+      if (_stats.TryGetValue(runner, out var statistics) && statistics == false) {
+        _stats.Remove(runner);
+      }
+      
+      if (_stats.Remove(runner, out var stats) == false) {
+        stats = runner.SetupStatistics();
+        EditorGUIUtility.PingObject(stats.Root);
+        Selection.activeObject = stats.Root;
+
+        _stats.Add(runner, stats);
+      } else {
+        runner.RemoveStatistics();
       }
     }
 

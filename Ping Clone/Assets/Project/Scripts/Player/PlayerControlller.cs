@@ -14,7 +14,11 @@ public class PlayerControlller : NetworkBehaviour
 
     public override void Spawned()
     {
-        Debug.LogWarning("We are spawned");
+        if (HasInputAuthority)
+        {
+            Debug.Log("We are spawned");
+        }
+        
         bl_EventHandler.Match.DispatchInMatchStatus(true);
 
         initPosition = transform.position;
@@ -23,8 +27,7 @@ public class PlayerControlller : NetworkBehaviour
 
     public override void FixedUpdateNetwork()
     {
-        if (GameTimer.Instance.IsGameDone > 0) return;
-        if (GameTimer.Instance.IsGamePaused > 0) return;
+        if (GameTimer.Instance.IsGameDone || GameTimer.Instance.IsGamePaused) return;
 
         if (GetInput(out NetworkInputData data))
         {
@@ -36,7 +39,7 @@ public class PlayerControlller : NetworkBehaviour
             float yDir = data.Buttons.IsSet(Buttons.Up) ? 1 : data.Buttons.IsSet(Buttons.Down) ? -1 : 0;
 
             float newY = Mathf.Clamp(transform.position.y + (yDir * Speed) * Runner.DeltaTime, GameController.Instance.BottomBound, GameController.Instance.TopBound);
-            m_Transform.position = new(m_Transform.position.x, newY, m_Transform.position.z);
+            m_Transform.position = new Vector3(m_Transform.position.x, newY, m_Transform.position.z);
         }
     }
 
