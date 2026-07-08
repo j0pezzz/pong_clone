@@ -18,7 +18,7 @@ public class MenuHandler : Fusion.Behaviour
     [SerializeField] GameObject NoRoomUI;
     [SerializeField] TextMeshProUGUI ErrorMessage;
 
-    GameMode cacheGameMode;
+    GameModes _cacheGameModes;
 
     void OnEnable()
     {
@@ -84,9 +84,9 @@ public class MenuHandler : Fusion.Behaviour
 
     public void SetGameMode(string gameMode) 
     { 
-        cacheGameMode = (GameMode)Enum.Parse(typeof(GameMode), gameMode);
-        ChooseScreen.SetActive(cacheGameMode == GameMode.PvP);
-        MatchSettings.SetActive(cacheGameMode == GameMode.PvE);
+        _cacheGameModes = (GameModes)Enum.Parse(typeof(GameModes), gameMode);
+        ChooseScreen.SetActive(_cacheGameModes == GameModes.PvP);
+        MatchSettings.SetActive(_cacheGameModes == GameModes.PvE);
     }
 
     public void PlayGame()
@@ -96,7 +96,7 @@ public class MenuHandler : Fusion.Behaviour
         if (!GameController.Instance.IsOnline)
         {
             AIDifficulty difficulty = (AIDifficulty)aiDifficulty.value;
-            StartCoroutine(GameController.Instance.CreateRoomLocally(cacheGameMode, points, difficulty));
+            StartCoroutine(GameController.Instance.CreateRoomLocally(_cacheGameModes, points, difficulty));
         }
         else
         {
@@ -106,13 +106,10 @@ public class MenuHandler : Fusion.Behaviour
 
     public void PlayOnline(bool online)
     {
-        if (online)
+        GameController.Instance.StartRunner(online);
+        
+        if (!online)
         {
-            GameController.Instance.StartRunner();
-        }
-        else
-        {
-            GameController.Instance.StartOfflineRunner();
             ChooseScreen.SetActive(false);
             MatchSettings.SetActive(true);
         }

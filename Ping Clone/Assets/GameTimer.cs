@@ -1,11 +1,12 @@
 using Fusion;
+using Project.Internal.Utility;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 public class GameTimer : NetworkBehaviour
 {
-    [Networked] public TickTimer StartTimer { get; set; }
+    [Networked] public TickTimer StartingTimer { get; set; }
     [Networked] public NetworkBool IsGamePaused { get; set; }
     [Networked] public NetworkBool IsGameDone { get; set; }
     [Networked] public int RequiredPoints { get; set; }
@@ -18,24 +19,18 @@ public class GameTimer : NetworkBehaviour
     public static int InitialTick;
     bool _roundStart;
     bool _startTimerExpired;
-
-    static GameTimer _instance;
-    public static GameTimer Instance
-    {
-        get => _instance;
-        private set => _instance = value;
-    }
+    private bool _isHost;
 
     public override void Spawned()
     {
-        Instance = this;
         bl_EventHandler.Match.onPauseCall += OnPause;
         bl_EventHandler.Match.onTimerStart += OnTimerStart;
         bl_EventHandler.Match.onScoreCheck += CheckTeamScore;
         bl_EventHandler.Match.onGameRestart += OnMatchRestart;
 
-        if (Runner.IsServer)
+        if (GameController.Instance.IsHost)
         {
+            IsGamePaused = true;
             IsGameDone = false;
             RequiredPoints = GameController.GameRequiredPoints;
         }
@@ -101,7 +96,8 @@ public class GameTimer : NetworkBehaviour
         {
             return Team.Team1;
         }
-        else if (Player2Points >= RequiredPoints)
+
+        if (Player2Points >= RequiredPoints)
         {
             return Team.Team2;
         }
@@ -117,7 +113,7 @@ public class GameTimer : NetworkBehaviour
     void OnTimerStart()
     {
         StartingText.gameObject.SetActive(true);
-        StartTimer = TickTimer.CreateFromSeconds(Runner, 10);
+        StartingTimer = TickTimer.CreateFromSeconds(Runner, 10);
     }
 
     public void RoundStart()
@@ -127,6 +123,13 @@ public class GameTimer : NetworkBehaviour
         RoundTimer.gameObject.SetActive(true);
     }
 
+    public override void FixedUpdateNetwork()
+    {
+        //TODO: we want the host to handle 
+    }
+
+    //TODO: this is fucking stupid, probably did not know how to do this properly before.
+    
     /// <summary>
     /// Since we want both players do show the time on their own, we are using Render.
     /// </summary>
@@ -134,34 +137,38 @@ public class GameTimer : NetworkBehaviour
     {
         base.Render();
 
-        if (StartTimer.Expired(Runner) && !_startTimerExpired)
+        if (StartingTimer.Expired(Runner) && !_startTimerExpired)
         {
             //Debug.LogWarning("GameTimer (Render): Start Timer expired!");
 
-            if (Runner.IsServer)
+            if (GameController.Instance.IsHost)
             {
                 GameController.Instance.SpawnBall();
-
+                
                 // If we are playing against AI, spawn AI.
-                if (GameController.Instance.CurrentGameMode == GameMode.PvE)
+                if (GameController.Instance.currentGameModes == GameModes.PvE)
                 {
                     GameController.Instance.SpawnAI();
                 }
+                
+                IsGamePaused = false;
             }
-
+            
             _startTimerExpired = true;
             StartingText.gameObject.SetActive(false);
             bl_EventHandler.Match.DispatchPauseEvent(false);
             RoundStart();
         }
 
-        if (StartTimer.IsRunning && !_startTimerExpired)
+        if (StartingTimer.IsRunning && !_startTimerExpired)
         {
             if (!Content.activeInHierarchy) Content.SetActive(true);
 
+            float remainingSeconds = StartingTimer.GetSecondsFloat(Runner);
+
             //Debug.LogWarning("GameTimer (Render): Start Timer running.");
-            string time = StringUtility.GetTimeFormat(StartTimer.RemainingTicks(Runner).GetValueOrDefault(0));
-            StartingText.text = $"STARTING IN {time}";
+            string time = StringUtility.GetTimeFormat(Mathf.FloorToInt(remainingSeconds / 60), Mathf.FloorToInt(remainingSeconds % 60));
+            StartingText.SetText($"STARTING IN {time}");
         }
 
         if (_roundStart && !IsGameDone)
@@ -188,5 +195,15 @@ public class GameTimer : NetworkBehaviour
         int minutes = Mathf.FloorToInt(time / 60);
         int seconds = Mathf.FloorToInt(time % 60);
         return $"{minutes:00}:{seconds:00}";
+    }
+    
+    static GameTimer _instance;
+    public static GameTimer Instance
+    {
+        get
+        {
+            if (!_instance) _instance = FindAnyObjectByType<GameTimer>();
+            return _instance;
+        }
     }
 }

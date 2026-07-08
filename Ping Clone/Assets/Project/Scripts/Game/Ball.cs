@@ -5,31 +5,28 @@ public class Ball : NetworkBehaviour
 {
     public float Speed = 5f;
     public float MaxSpeed = 30;
-    [Tooltip("Time in seconds for each speed increment")]
+    [Tooltip("How often does each speed increment happen?")]
     public float SpeedIncrement = 30;
-    [Tooltip("Multiplier applied to the speed")]
+    [Tooltip("Speed Multiplier")]
     public float SpeedIncrementFactor = 1.1f;
 
     public Rigidbody rb;
     public MapPrefabs mapPrefabs;
 
-    Vector3 initPos;
-    Vector3 pausedVelocity;
-
-    float xDir, yDir;
-    float elapsedTime = 0;
-    float _lastSpeedIncrementTime = 0;
-
-    GameObject paddle1, paddle2;
-    AIController paddleController1, paddleController2;
-
-    bool _initialLaunchDone = false;
+    Vector3 _initPos;
+    Vector3 _pausedVelocity;
+    float _xDir, _yDir;
+    float _elapsedTime;
+    float _lastSpeedIncrementTime;
+    GameObject _paddle1, _paddle2;
+    AIController _paddleController1, _paddleController2;
+    bool _initialLaunchDone;
 
     public override void Spawned()
     {
         if (!Runner.IsServer) return;
 
-        initPos = transform.position;
+        _initPos = transform.position;
 
         LaunchBall();
         bl_EventHandler.Match.onPauseCall += OnGamePaused;
@@ -47,15 +44,15 @@ public class Ball : NetworkBehaviour
 
         if (_initialLaunchDone)
         {
-            elapsedTime = (Runner.Tick - GameTimer.InitialTick) / (float)Runner.TickRate;
+            _elapsedTime = (Runner.Tick - GameTimer.InitialTick) / (float)Runner.TickRate;
 
-            if (elapsedTime - _lastSpeedIncrementTime >= SpeedIncrement)
+            if (_elapsedTime - _lastSpeedIncrementTime >= SpeedIncrement)
             {
                 Speed = Mathf.Min(Speed * SpeedIncrementFactor, MaxSpeed);
 
-                _lastSpeedIncrementTime = elapsedTime;
+                _lastSpeedIncrementTime = _elapsedTime;
 
-                Debug.LogWarning($"Speed: {Speed}");
+                Debug.Log($"Increased speed to {Speed}");
             }
         }
         else
@@ -69,12 +66,12 @@ public class Ball : NetworkBehaviour
     {
         if (paused)
         {
-            pausedVelocity = rb.linearVelocity;
+            _pausedVelocity = rb.linearVelocity;
             rb.linearVelocity = Vector3.zero;
         }
         else
         {
-            rb.linearVelocity = pausedVelocity;
+            rb.linearVelocity = _pausedVelocity;
         }
     }
 
@@ -82,7 +79,7 @@ public class Ball : NetworkBehaviour
     {
         if (!Runner.IsServer) return;
 
-        transform.position = initPos;
+        transform.position = _initPos;
         LaunchBall();
     }
 
@@ -90,12 +87,12 @@ public class Ball : NetworkBehaviour
     {
         do
         {
-            xDir = Random.Range(-1f, 1f);
-        } while (Mathf.Abs(xDir) < 0.5f);
+            _xDir = Random.Range(-1f, 1f);
+        } while (Mathf.Abs(_xDir) < 0.5f);
 
-        yDir = Random.Range(-0.5f, 0.5f);
+        _yDir = Random.Range(-0.5f, 0.5f);
 
-        Vector3 launchDir = new Vector3(xDir, yDir, 0).normalized;
+        Vector3 launchDir = new Vector3(_xDir, _yDir, 0).normalized;
 
         rb.linearVelocity = launchDir * Speed;
     }
@@ -145,13 +142,14 @@ public class Ball : NetworkBehaviour
         }
     }
 
-    Team GetScoringTeam(string tag)
+    Team GetScoringTeam(string nameTag)
     {
-        if (tag == "Player 1 Goal")
+        if (nameTag == "Player 1 Goal")
         {
             return Team.Team2;
         }
-        else if (tag == "Player 2 Goal")
+        
+        if (nameTag == "Player 2 Goal")
         {
             return Team.Team1;
         }

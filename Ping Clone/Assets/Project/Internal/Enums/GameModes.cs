@@ -1,5 +1,5 @@
 [System.Serializable]
-public enum GameMode
+public enum GameModes
 {
     /// <summary>
     /// Player versus Player

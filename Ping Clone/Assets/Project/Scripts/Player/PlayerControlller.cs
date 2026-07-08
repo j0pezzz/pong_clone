@@ -1,5 +1,7 @@
+using System;
 using Fusion;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class PlayerControlller : NetworkBehaviour
 {
@@ -8,9 +10,8 @@ public class PlayerControlller : NetworkBehaviour
 
     public int PlayerRef = 1;
 
-    Transform m_Transform;
-
-    Vector3 initPosition;
+    Transform _transform;
+    Vector3 _initPosition;
 
     public override void Spawned()
     {
@@ -21,14 +22,16 @@ public class PlayerControlller : NetworkBehaviour
         
         bl_EventHandler.Match.DispatchInMatchStatus(true);
 
-        initPosition = transform.position;
-        m_Transform = transform;
+        _initPosition = transform.position;
+        _transform = transform;
     }
 
     public override void FixedUpdateNetwork()
     {
+        if (!Runner.ProvideInput) return;
         if (GameTimer.Instance.IsGameDone || GameTimer.Instance.IsGamePaused) return;
 
+        //TODO: this only works in Host/Client Mode.
         if (GetInput(out NetworkInputData data))
         {
             NetworkButtons pressed = data.Buttons.GetPressed(ButtonsPrevious);
@@ -39,12 +42,23 @@ public class PlayerControlller : NetworkBehaviour
             float yDir = data.Buttons.IsSet(Buttons.Up) ? 1 : data.Buttons.IsSet(Buttons.Down) ? -1 : 0;
 
             float newY = Mathf.Clamp(transform.position.y + (yDir * Speed) * Runner.DeltaTime, GameController.Instance.BottomBound, GameController.Instance.TopBound);
-            m_Transform.position = new Vector3(m_Transform.position.x, newY, m_Transform.position.z);
+            _transform.position = new Vector3(_transform.position.x, newY, _transform.position.z);
         }
+    }
+
+    private void FixedUpdate()
+    {
+        if (Runner.ProvideInput) return;
+        if (GameTimer.Instance.IsGameDone || GameTimer.Instance.IsGamePaused) return;
+        
+        float yDir = Keyboard.current.wKey.wasPressedThisFrame ? 1 : Keyboard.current.sKey.wasPressedThisFrame ? -1 : 0;
+            
+        float newY = Mathf.Clamp(transform.position.y + (yDir * Speed) * Runner.DeltaTime, GameController.Instance.BottomBound, GameController.Instance.TopBound);
+        _transform.position = new Vector3(_transform.position.x, newY, _transform.position.z);
     }
 
     public void SetPlayerToInitPosition()
     {
-        m_Transform.position = initPosition;
+        _transform.position = _initPosition;
     }
 }

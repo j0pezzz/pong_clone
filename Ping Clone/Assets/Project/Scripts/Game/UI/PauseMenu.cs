@@ -1,27 +1,28 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 
 public class PauseMenu : MonoBehaviour
 {
     [SerializeField] GameObject Content;
 
-    bool paused = false;
+    bool _paused;
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Escape))
+        if (Keyboard.current.escapeKey.wasPressedThisFrame)
         {
-            paused = !paused;
-            Content.SetActive(paused);
-            bl_EventHandler.Match.DispatchPauseEvent(paused);
+            _paused = !_paused;
+            Content.SetActive(_paused);
+            bl_EventHandler.Match.DispatchPauseEvent(_paused);
         }
     }
 
     public void Resume()
     {
-        paused = false;
-        Content.SetActive(paused);
-        bl_EventHandler.Match.DispatchPauseEvent(paused);
+        _paused = false;
+        Content.SetActive(_paused);
+        bl_EventHandler.Match.DispatchPauseEvent(_paused);
     }
 
     public void QuitGame()
