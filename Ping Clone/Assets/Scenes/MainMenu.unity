@@ -5993,7 +5993,7 @@ GameObject:
   - component: {fileID: 1240527946}
   - component: {fileID: 1240527947}
   m_Layer: 0
-  m_Name: Game Controller
+  m_Name: Network Handler
   m_TagString: GameController
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

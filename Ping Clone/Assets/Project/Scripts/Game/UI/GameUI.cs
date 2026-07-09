@@ -2,6 +2,9 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
+/// <summary>
+/// Handles everything game UI related.
+/// </summary>
 public class GameUI : MonoBehaviour
 {
     public GameFinish GameFinish;
@@ -11,38 +14,80 @@ public class GameUI : MonoBehaviour
     [SerializeField] GameObject WaitingForPlayersUI;
     [SerializeField] TextMeshProUGUI SessionID;
     public GameObject PlayerLeft;
+    
+    [Header("Time References")]
+    [SerializeField] GameObject content;
+    [SerializeField] TextMeshProUGUI startingText;
+    [SerializeField] TextMeshProUGUI roundTimer;
 
     void Awake()
     {
-        Instance = this;
-
+        bl_EventHandler.Match.OnTimerStart += OnTimerStart;
+        bl_EventHandler.GameplayUI.OnStartingTimerChange += OnStartingTimerChanged;
+        bl_EventHandler.GameplayUI.OnRoundTimerChange += OnRoundTimerChange;
+        bl_EventHandler.Match.OnNewRound += OnNewRound;
         bl_EventHandler.Match.onWaitingPlayers += WaitingForPlayers;
         bl_EventHandler.Match.onGamePoints += OnGamePoints;
+        
+        //TODO: this will cause issues most likely.
+        MaxScoreText.SetText($"Played till either one gets {NetworkHandler.GameRequiredPoints} points");
     }
 
     void OnDisable()
     {
+        bl_EventHandler.Match.OnTimerStart -= OnTimerStart;
+        bl_EventHandler.GameplayUI.OnStartingTimerChange -= OnStartingTimerChanged;
+        bl_EventHandler.GameplayUI.OnRoundTimerChange -= OnRoundTimerChange;
+        bl_EventHandler.Match.OnNewRound -= OnNewRound;
         bl_EventHandler.Match.onWaitingPlayers -= WaitingForPlayers;
         bl_EventHandler.Match.onGamePoints -= OnGamePoints;
     }
 
     void OnGamePoints(int points)
     {
-        MaxScoreText.text = $"Played till either one gets {GameTimer.Instance.RequiredPoints} points";
+        //MaxScoreText.text = $"Played till either one gets {TimeManager.Instance.RequiredPoints} points";
     }
 
     void WaitingForPlayers(bool waiting)
     {
-        SessionID.text = GameController.Instance.SessionInfo.Name;
+        SessionID.text = NetworkHandler.Instance.SessionInfo.Name;
         WaitingForPlayersUI.SetActive(waiting);
     }
 
     /// <summary>
-    /// Sends an callback to restart the scene.
+    /// Sends a callback to restart the scene.
     /// </summary>
     public void StartAgain()
     {
         bl_EventHandler.Match.DispatchGameRestart();
+    }
+
+    void OnTimerStart(bool isStarting)
+    {
+        content.SetActive(isStarting);
+        startingText.gameObject.SetActive(isStarting);
+    }
+
+    void OnStartingTimerChanged(float seconds)
+    {
+        string time = StringUtility.GetTimeFormat(Mathf.FloorToInt(seconds / 60), Mathf.FloorToInt(seconds % 60));
+        startingText.SetText($"STARTING IN {time}");
+    }
+
+    void OnRoundTimerChange(float elapsedTime, bool show)
+    {
+        content.SetActive(show);
+
+        if (elapsedTime.Equals(-1)) return;
+        
+        string formattedTime = StringUtility.GetTimeFormat(elapsedTime);
+        
+        roundTimer.SetText(formattedTime);
+    }
+
+    void OnNewRound()
+    {
+        roundTimer.gameObject.SetActive(true);
     }
 
     /// <summary>
@@ -50,14 +95,17 @@ public class GameUI : MonoBehaviour
     /// </summary>
     public void LeaveSession()
     {
-        GameController.Instance.ShutdownAll();
+        NetworkHandler.Instance.ShutdownAll();
         SceneManager.LoadScene("MainMenu");
     }
 
     static GameUI _instance;
     public static GameUI Instance
     {
-        get => _instance;
-        private set => _instance = value;
+        get
+        {
+            if (!_instance) _instance = FindAnyObjectByType<GameUI>();
+            return _instance;
+        }
     }
 }

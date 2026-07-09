@@ -6,24 +6,19 @@ public class ScoreUI : MonoBehaviour
     [SerializeField] TextMeshProUGUI player1Score;
     [SerializeField] TextMeshProUGUI player2Score;
 
-    public void UpdateScores(int p1Score, int p2Score)
+    private void Start()
     {
-        player1Score.text = string.Format(bl_GameTexts.Player1Points, p1Score);
-        player2Score.text = string.Format(bl_GameTexts.Player2Points, p2Score);
+        bl_EventHandler.GameplayUI.OnPointsChange += UpdateScores;
     }
 
-    public void ScoreChange(Team team, int score)
+    private void OnDisable()
     {
-        switch (team)
-        {
-            case Team.Team1:
-                player1Score.text = string.Format(bl_GameTexts.Player1Points, score);
-                break;
-            case Team.Team2:
-                player2Score.text = string.Format(bl_GameTexts.Player2Points, score);
-                break;
-        }
+        bl_EventHandler.GameplayUI.OnPointsChange -= UpdateScores;
+    }
 
-        bl_EventHandler.Match.DispatchScoreCheck();
+    public void UpdateScores(int p1Score, int p2Score)
+    {
+        player1Score.SetText(string.Format(bl_GameTexts.Player1Points, p1Score));
+        player2Score.SetText(string.Format(bl_GameTexts.Player2Points, p2Score));
     }
 }

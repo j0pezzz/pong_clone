@@ -14,7 +14,7 @@ public class PauseMenu : MonoBehaviour
         {
             _paused = !_paused;
             Content.SetActive(_paused);
-            bl_EventHandler.Match.DispatchPauseEvent(_paused);
+            bl_EventHandler.Match.DispatchGlobalGamePause(_paused);
         }
     }
 
@@ -22,7 +22,7 @@ public class PauseMenu : MonoBehaviour
     {
         _paused = false;
         Content.SetActive(_paused);
-        bl_EventHandler.Match.DispatchPauseEvent(_paused);
+        bl_EventHandler.Match.DispatchGlobalGamePause(_paused);
     }
 
     public void QuitGame()

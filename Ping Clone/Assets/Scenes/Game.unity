@@ -1157,8 +1157,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 396594407}
-  - component: {fileID: 396594409}
-  - component: {fileID: 396594410}
   m_Layer: 5
   m_Name: Timer
   m_TagString: Untagged
@@ -1186,48 +1184,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &396594409
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 396594406}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 745456ab2b1645c43bd5ec0369ea0e69, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _IsGamePaused:
-    RawValue: 0
-  _IsGameDone:
-    RawValue: 0
-  _RequiredPoints: 0
-  _Player1Points: 0
-  _Player2Points: 0
-  Content: {fileID: 1968518014}
-  StartingText: {fileID: 560381464}
-  RoundTimer: {fileID: 28884001}
---- !u!114 &396594410
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 396594406}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  SortKey: 2817238558
-  SendPriority: 1
-  EnableInterpolation: 1
-  Flags: 262146
-  NestedObjects: []
-  NetworkedBehaviours:
-  - {fileID: 396594409}
-  ForceRemoteRenderTimeframe: 0
 --- !u!1 &458148770
 GameObject:
   m_ObjectHideFlags: 0
@@ -1922,6 +1878,9 @@ MonoBehaviour:
   WaitingForPlayersUI: {fileID: 353740384}
   SessionID: {fileID: 1245779131}
   PlayerLeft: {fileID: 2107835268}
+  content: {fileID: 1968518014}
+  startingText: {fileID: 560381464}
+  roundTimer: {fileID: 28884001}
 --- !u!1 &971624345
 GameObject:
   m_ObjectHideFlags: 0
@@ -4128,6 +4087,92 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1968518014}
   m_CullTransparentMesh: 1
+--- !u!1 &1984024220
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1984024224}
+  - component: {fileID: 1984024222}
+  - component: {fileID: 1984024223}
+  - component: {fileID: 1984024221}
+  m_Layer: 0
+  m_Name: '|--REQUIRED--|'
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1984024221
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1984024220}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 84d14bb8b27b49e68ee6ad1f35f3ea42, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Project.Scripts.Game.GameManager
+  _Player1Points: 0
+  _Player2Points: 0
+  _IsGamePaused:
+    RawValue: 0
+  _IsGameDone:
+    RawValue: 0
+  _RequiredPoints: 0
+--- !u!114 &1984024222
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1984024220}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 3873925037
+  SendPriority: 1
+  EnableInterpolation: 1
+  Flags: 131074
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 1984024223}
+  - {fileID: 1984024221}
+  ForceRemoteRenderTimeframe: 0
+--- !u!114 &1984024223
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1984024220}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 745456ab2b1645c43bd5ec0369ea0e69, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TimeManager
+--- !u!4 &1984024224
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1984024220}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2007927516
 GameObject:
   m_ObjectHideFlags: 0
@@ -4479,3 +4524,4 @@ SceneRoots:
   - {fileID: 2007927518}
   - {fileID: 308678383}
   - {fileID: 1098801854}
+  - {fileID: 1984024224}

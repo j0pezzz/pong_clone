@@ -1,4 +1,5 @@
 using Fusion;
+using Project.Scripts.Game;
 using UnityEngine;
 
 public class Ball : NetworkBehaviour
@@ -24,19 +25,17 @@ public class Ball : NetworkBehaviour
 
     public override void Spawned()
     {
-        if (!Runner.IsServer) return;
+        if (!NetworkHandler.Instance.IsHost) return;
 
         _initPos = transform.position;
 
         LaunchBall();
-        bl_EventHandler.Match.onPauseCall += OnGamePaused;
+        bl_EventHandler.Match.OnGlobalGamePause += OnGamePaused;
     }
 
     public override void FixedUpdateNetwork()
     {
-        if (GameController.Instance == null) return;
-
-        if (GameTimer.Instance.IsGameDone)
+        if (GameManager.Instance.IsGameDone)
         {
             rb.linearVelocity = Vector3.zero;
             return;
@@ -44,7 +43,7 @@ public class Ball : NetworkBehaviour
 
         if (_initialLaunchDone)
         {
-            _elapsedTime = (Runner.Tick - GameTimer.InitialTick) / (float)Runner.TickRate;
+            _elapsedTime = (Runner.Tick - TimeManager.InitialTick) / (float)Runner.TickRate;
 
             if (_elapsedTime - _lastSpeedIncrementTime >= SpeedIncrement)
             {
@@ -99,9 +98,9 @@ public class Ball : NetworkBehaviour
 
     void OnCollisionEnter(Collision collision)
     {
-        if (!Runner.IsServer) return;
+        if (!NetworkHandler.Instance.IsHost) return;
 
-        if (GameTimer.Instance != null && GameTimer.Instance.IsGameDone) return;
+        if (GameManager.Instance.IsGameDone) return;
 
         if (collision.gameObject.CompareTag("Paddle1"))
         {
@@ -125,20 +124,20 @@ public class Ball : NetworkBehaviour
 
     void OnTriggerEnter(Collider other)
     {
-        if (!Runner.IsServer) return;
+        if (!NetworkHandler.Instance.IsHost) return;
 
-        if (GameTimer.Instance != null && GameTimer.Instance.IsGameDone) return;
+        if (GameManager.Instance.IsGameDone) return;
 
         Team scoringTeam = GetScoringTeam(other.gameObject.tag);
 
         if (scoringTeam != Team.None)
         {
-            GameTimer.AddScore(scoringTeam);
+            bl_EventHandler.Match.DispatchPointAddition(scoringTeam);
 
             //Note: Disable these when training.
             SetBallToInit();
 
-            GameController.Instance.ResetGame();
+            NetworkHandler.Instance.ResetGame();
         }
     }
 

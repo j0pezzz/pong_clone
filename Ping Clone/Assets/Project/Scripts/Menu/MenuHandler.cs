@@ -93,20 +93,20 @@ public class MenuHandler : Fusion.Behaviour
     {
         string points = maxPointDropdown.options[maxPointDropdown.value].text;
 
-        if (!GameController.Instance.IsOnline)
+        if (!NetworkHandler.Instance.IsOnline)
         {
             AIDifficulty difficulty = (AIDifficulty)aiDifficulty.value;
-            StartCoroutine(GameController.Instance.CreateRoomLocally(_cacheGameModes, points, difficulty));
+            StartCoroutine(NetworkHandler.Instance.CreateRoomLocally(_cacheGameModes, points, difficulty));
         }
         else
         {
-            StartCoroutine(GameController.Instance.HostRoom(points));
+            StartCoroutine(NetworkHandler.Instance.HostRoom(points));
         }
     }
 
     public void PlayOnline(bool online)
     {
-        GameController.Instance.StartRunner(online);
+        NetworkHandler.Instance.StartRunner(online);
         
         if (!online)
         {
@@ -115,14 +115,14 @@ public class MenuHandler : Fusion.Behaviour
         }
     }
 
-    public void StopOnline() => GameController.Instance.StopRunner();
+    public void StopOnline() => NetworkHandler.Instance.StopRunner();
 
     public void HostRoom()
     {
         NetworkScreen.SetActive(false);
         MatchSettings.SetActive(true);
 
-        aiDifficulty.gameObject.SetActive(!GameController.Instance.IsOnline);
+        aiDifficulty.gameObject.SetActive(!NetworkHandler.Instance.IsOnline);
     }
 
     public void JoinRoom(bool isJoining)
@@ -135,7 +135,7 @@ public class MenuHandler : Fusion.Behaviour
         {
             JoinRoomContent.SetActive(false);
 
-            StartCoroutine(GameController.Instance.JoinRoom(SessionName.text));
+            StartCoroutine(NetworkHandler.Instance.JoinRoom(SessionName.text));
         }
     }
 }

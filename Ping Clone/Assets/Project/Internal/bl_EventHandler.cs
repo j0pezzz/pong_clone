@@ -8,6 +8,7 @@ public static class bl_EventHandler
         public static void DispatchOnlineStatus(bool online) => Online?.Invoke(online);
     }
 
+    //TODO: this needs refactoring, most are super useless and just confusing.
     public static class Match
     {
         public static Action<bool> onMatch;
@@ -16,23 +17,29 @@ public static class bl_EventHandler
         public static Action<bool> onWaitingPlayers;
         public static void DispatchWaitingStatus(bool waiting) => onWaitingPlayers?.Invoke(waiting);
 
-        public static Action onTimerStart;
-        public static void DispatchTimerStart() => onTimerStart?.Invoke();
+        public static Action<bool> OnTimerStart;
+        public static void DispatchTimerStart(bool isStarting) => OnTimerStart?.Invoke(isStarting);
 
-        public static Action<bool> onPauseCall;
-        public static void DispatchPauseEvent(bool paused) => onPauseCall?.Invoke(paused);
+        public static Action OnNewRound;
+        public static void DispatchNewRound() => OnNewRound?.Invoke();
 
+        public static Action<bool> OnGlobalGamePause;
+        public static void DispatchGlobalGamePause(bool paused) => OnGlobalGamePause?.Invoke(paused);
+
+        public static Action OnGameStart;
+        public static void DispatchGameStart() => OnGameStart?.Invoke();
+        
         public static Action onGameFinish;
         public static void DispatchGameFinish() => onGameFinish?.Invoke();
-
-        public static Action onScoreCheck;
-        public static void DispatchScoreCheck() => onScoreCheck?.Invoke();
 
         public static Action<int> onGamePoints;
         public static void DispatchGamePoints(int points) => onGamePoints?.Invoke(points);
 
-        public static Action onGameRestart;
-        public static void DispatchGameRestart() => onGameRestart?.Invoke();
+        public static Action OnGameRestart;
+        public static void DispatchGameRestart() => OnGameRestart?.Invoke();
+
+        public static Action<Team> OnTeamPointAdd;
+        public static void DispatchPointAddition(Team team) => OnTeamPointAdd?.Invoke(team);
     }
 
     public static class Menu
@@ -45,5 +52,21 @@ public static class bl_EventHandler
 
         public static Action<string> NoRoom;
         public static void DispatchNoRoomToJoin(string message) => NoRoom?.Invoke(message);
+    }
+
+    public static class GameplayUI
+    {
+        public static Action<int, int> OnPointsChange;
+
+        public static void DispatchPointsChange(int player1Points, int player2Points) =>
+            OnPointsChange?.Invoke(player1Points, player2Points);
+
+        public static Action<float> OnStartingTimerChange;
+        public static void DispatchStartingTimerChange(float seconds) => OnStartingTimerChange?.Invoke(seconds);
+
+        public static Action<float, bool> OnRoundTimerChange;
+
+        public static void DispatchRoundTimerChange(float elapsedTime, bool show) =>
+            OnRoundTimerChange?.Invoke(elapsedTime, show);
     }
 }

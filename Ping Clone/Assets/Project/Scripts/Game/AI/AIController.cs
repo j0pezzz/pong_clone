@@ -24,7 +24,7 @@ public class AIController : Agent
 
     void UseNormalBall()
     {
-        ball = GameController.Instance.cacheBall;
+        ball = NetworkHandler.Instance.cacheBall;
         if (!ball.TryGetComponent(out ballRigidbody))
         {
             Debug.LogError("No rigidbody attached to Ball");

@@ -1,9 +1,9 @@
-using System;
 using Fusion;
+using Project.Scripts.Game;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-public class PlayerControlller : NetworkBehaviour
+public class PaddleControlller : NetworkBehaviour
 {
     [Networked] public NetworkButtons ButtonsPrevious { get; set; }
     [Range(1, 5)] public float Speed = 5f;
@@ -17,7 +17,7 @@ public class PlayerControlller : NetworkBehaviour
     {
         if (HasInputAuthority)
         {
-            Debug.Log("We are spawned");
+            Debug.Log("Paddle spawned!");
         }
         
         bl_EventHandler.Match.DispatchInMatchStatus(true);
@@ -26,12 +26,14 @@ public class PlayerControlller : NetworkBehaviour
         _transform = transform;
     }
 
+    /// <summary>
+    /// This handles everything input related when in Host/Client/Single Mode.
+    /// </summary>
     public override void FixedUpdateNetwork()
     {
         if (!Runner.ProvideInput) return;
-        if (GameTimer.Instance.IsGameDone || GameTimer.Instance.IsGamePaused) return;
+        if (GameManager.Instance.IsGameDone || GameManager.Instance.IsGamePaused) return;
 
-        //TODO: this only works in Host/Client Mode.
         if (GetInput(out NetworkInputData data))
         {
             NetworkButtons pressed = data.Buttons.GetPressed(ButtonsPrevious);
@@ -41,19 +43,22 @@ public class PlayerControlller : NetworkBehaviour
 
             float yDir = data.Buttons.IsSet(Buttons.Up) ? 1 : data.Buttons.IsSet(Buttons.Down) ? -1 : 0;
 
-            float newY = Mathf.Clamp(transform.position.y + (yDir * Speed) * Runner.DeltaTime, GameController.Instance.BottomBound, GameController.Instance.TopBound);
+            float newY = Mathf.Clamp(transform.position.y + (yDir * Speed) * Runner.DeltaTime, NetworkHandler.Instance.BottomBound, NetworkHandler.Instance.TopBound);
             _transform.position = new Vector3(_transform.position.x, newY, _transform.position.z);
         }
     }
 
+    /// <summary>
+    /// This handles everything input related when in Shared Mode.
+    /// </summary>
     private void FixedUpdate()
     {
         if (Runner.ProvideInput) return;
-        if (GameTimer.Instance.IsGameDone || GameTimer.Instance.IsGamePaused) return;
+        if (GameManager.Instance.IsGameDone || GameManager.Instance.IsGamePaused) return;
         
         float yDir = Keyboard.current.wKey.wasPressedThisFrame ? 1 : Keyboard.current.sKey.wasPressedThisFrame ? -1 : 0;
             
-        float newY = Mathf.Clamp(transform.position.y + (yDir * Speed) * Runner.DeltaTime, GameController.Instance.BottomBound, GameController.Instance.TopBound);
+        float newY = Mathf.Clamp(transform.position.y + (yDir * Speed) * Runner.DeltaTime, NetworkHandler.Instance.BottomBound, NetworkHandler.Instance.TopBound);
         _transform.position = new Vector3(_transform.position.x, newY, _transform.position.z);
     }
 

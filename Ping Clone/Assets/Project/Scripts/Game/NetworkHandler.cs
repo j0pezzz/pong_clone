@@ -8,7 +8,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 
-public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
+public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
 {
     #region Public Members
     public GameObject PlayerController;
@@ -40,7 +40,7 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
     #endregion
 
     #region Private Members
-    Dictionary<int, PlayerControlller> playerControllers = new();
+    Dictionary<int, PaddleControlller> playerControllers = new();
     Dictionary<int, AIController> aiControllers = new();
     [HideInInspector] public Ball cacheBall;
     Vector3 _spawnPoint;
@@ -52,7 +52,7 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
         isMobile = true;
         //isMobile = Application.isMobilePlatform;
         
-        UnityEngine.Object[] gameControllers = FindObjectsByType(typeof(GameController), FindObjectsSortMode.None);
+        UnityEngine.Object[] gameControllers = FindObjectsByType(typeof(NetworkHandler), FindObjectsSortMode.None);
         if (gameControllers.Length > 1)
         {
             Destroy(gameControllers[1]);
@@ -264,13 +264,13 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
     {
         foreach (NetworkObject nObj in _spawnedPlayers.Values)
         {
-            if (nObj.HasInputAuthority && nObj.TryGetComponent(out PlayerControlller controller))
+            if (nObj.HasInputAuthority && nObj.TryGetComponent(out PaddleControlller controller))
             {
                 controller.SetPlayerToInitPosition();
             }
         }
 
-        foreach (PlayerControlller controller in playerControllers.Values)
+        foreach (PaddleControlller controller in playerControllers.Values)
         {
             controller.SetPlayerToInitPosition();
         }
@@ -280,7 +280,8 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
             aiController.SetToInit();
         }
 
-        GameTimer.Instance.RoundStart();
+        bl_EventHandler.Match.DispatchNewRound();
+        TimeManager.Instance.OnNewRound();
 
         cacheBall.SetBallToInit();
     }
@@ -314,7 +315,7 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
             playerObject.name = $"Player{i + 1}";
             playerObject.tag = $"Paddle{i + 1}";
 
-            if (playerObject.TryGetComponent(out PlayerControlller controller))
+            if (playerObject.TryGetComponent(out PaddleControlller controller))
             {
                 controller.PlayerRef = i + 1;
                 playerControllers.Add(i + 1, controller);
@@ -377,7 +378,7 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
         {
             Debug.Log("[GameController]: Not enough players, waiting for more players.");
 
-            bl_EventHandler.Match.DispatchPauseEvent(true);
+            bl_EventHandler.Match.DispatchGlobalGamePause(true);
             bl_EventHandler.Match.DispatchWaitingStatus(true);
 
             //DEBUG:
@@ -390,7 +391,7 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
             Debug.LogWarning("[GameController]: Enough players, starting in 10 seconds.");
 
             bl_EventHandler.Match.DispatchWaitingStatus(false);
-            bl_EventHandler.Match.DispatchTimerStart();
+            bl_EventHandler.Match.DispatchTimerStart(true);
         }
     }
 
@@ -416,7 +417,7 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
         else
         {
             bl_EventHandler.Match.DispatchWaitingStatus(false);
-            bl_EventHandler.Match.DispatchTimerStart();
+            bl_EventHandler.Match.DispatchTimerStart(true);
         }
     }
 
@@ -435,7 +436,7 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
             
         // Since a player left, it means we the Host are alone.
         // We should give the Host an option to either leave the session or start the match again.
-        bl_EventHandler.Match.DispatchPauseEvent(true);
+        bl_EventHandler.Match.DispatchGlobalGamePause(true);
         GameUI.Instance.PlayerLeft.SetActive(true);
 
         if (cacheBall != null)
@@ -443,7 +444,7 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
             runner.Despawn(cacheBall.Object);
         }
 
-        GameTimer.Instance.StartingTimer = TickTimer.None;
+        TimeManager.Instance.StartingTimer = TickTimer.None;
     }
 
     public void OnInput(NetworkRunner runner, NetworkInput input)
@@ -488,8 +489,8 @@ public class GameController : SimulationBehaviour, INetworkRunnerCallbacks
 
     #endregion
 
-    static GameController _instance;
-    public static GameController Instance
+    static NetworkHandler _instance;
+    public static NetworkHandler Instance
     {
         get => _instance;
         private set => _instance = value;
