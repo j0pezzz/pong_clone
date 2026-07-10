@@ -10,7 +10,6 @@ public class Ball : NetworkBehaviour
     public float SpeedIncrement = 30;
     [Tooltip("Speed Multiplier")]
     public float SpeedIncrementFactor = 1.1f;
-
     public Rigidbody rb;
     public MapPrefabs mapPrefabs;
 
@@ -31,6 +30,11 @@ public class Ball : NetworkBehaviour
 
         LaunchBall();
         bl_EventHandler.Match.OnGlobalGamePause += OnGamePaused;
+    }
+
+    public override void Despawned(NetworkRunner runner, bool hasState)
+    {
+        bl_EventHandler.Match.OnGlobalGamePause -= OnGamePaused;
     }
 
     public override void FixedUpdateNetwork()
@@ -76,7 +80,8 @@ public class Ball : NetworkBehaviour
 
     public void SetBallToInit()
     {
-        if (!Runner.IsServer) return;
+        if (!NetworkHandler.Instance.IsHost) return;
+        if (GameManager.Instance.IsGameDone) return;
 
         transform.position = _initPos;
         LaunchBall();

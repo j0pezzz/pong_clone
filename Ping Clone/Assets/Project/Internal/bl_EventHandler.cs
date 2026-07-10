@@ -14,8 +14,8 @@ public static class bl_EventHandler
         public static Action<bool> onMatch;
         public static void DispatchInMatchStatus(bool inMatch) => onMatch?.Invoke(inMatch);
 
-        public static Action<bool> onWaitingPlayers;
-        public static void DispatchWaitingStatus(bool waiting) => onWaitingPlayers?.Invoke(waiting);
+        public static Action<bool> OnWaitingPlayers;
+        public static void DispatchWaitingPlayers(bool waiting) => OnWaitingPlayers?.Invoke(waiting);
 
         public static Action<bool> OnTimerStart;
         public static void DispatchTimerStart(bool isStarting) => OnTimerStart?.Invoke(isStarting);
@@ -31,9 +31,6 @@ public static class bl_EventHandler
         
         public static Action onGameFinish;
         public static void DispatchGameFinish() => onGameFinish?.Invoke();
-
-        public static Action<int> onGamePoints;
-        public static void DispatchGamePoints(int points) => onGamePoints?.Invoke(points);
 
         public static Action OnGameRestart;
         public static void DispatchGameRestart() => OnGameRestart?.Invoke();

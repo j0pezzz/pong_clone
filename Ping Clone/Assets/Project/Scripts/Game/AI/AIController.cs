@@ -4,6 +4,7 @@ using Unity.MLAgents.Policies;
 using Unity.MLAgents.Sensors;
 using UnityEngine;
 
+//TODO: need to rework this completely so we are not using ML-Agent, but instead a custom solution.
 public class AIController : Agent
 {
     public float Speed = 5f;

@@ -1,7 +1,6 @@
 using Project.Scripts.Game;
 using TMPro;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 public class GameFinish : MonoBehaviour
 {
@@ -26,6 +25,6 @@ public class GameFinish : MonoBehaviour
 
     public void GoToMenu()
     {
-        SceneManager.LoadScene("MainMenu");
+        NetworkHandler.Instance.Disconnect();
     }
 }

@@ -26,10 +26,8 @@ public class GameUI : MonoBehaviour
         bl_EventHandler.GameplayUI.OnStartingTimerChange += OnStartingTimerChanged;
         bl_EventHandler.GameplayUI.OnRoundTimerChange += OnRoundTimerChange;
         bl_EventHandler.Match.OnNewRound += OnNewRound;
-        bl_EventHandler.Match.onWaitingPlayers += WaitingForPlayers;
-        bl_EventHandler.Match.onGamePoints += OnGamePoints;
+        bl_EventHandler.Match.OnWaitingPlayers += WaitingForPlayers;
         
-        //TODO: this will cause issues most likely.
         MaxScoreText.SetText($"Played till either one gets {NetworkHandler.GameRequiredPoints} points");
     }
 
@@ -39,13 +37,7 @@ public class GameUI : MonoBehaviour
         bl_EventHandler.GameplayUI.OnStartingTimerChange -= OnStartingTimerChanged;
         bl_EventHandler.GameplayUI.OnRoundTimerChange -= OnRoundTimerChange;
         bl_EventHandler.Match.OnNewRound -= OnNewRound;
-        bl_EventHandler.Match.onWaitingPlayers -= WaitingForPlayers;
-        bl_EventHandler.Match.onGamePoints -= OnGamePoints;
-    }
-
-    void OnGamePoints(int points)
-    {
-        //MaxScoreText.text = $"Played till either one gets {TimeManager.Instance.RequiredPoints} points";
+        bl_EventHandler.Match.OnWaitingPlayers -= WaitingForPlayers;
     }
 
     void WaitingForPlayers(bool waiting)
@@ -64,7 +56,7 @@ public class GameUI : MonoBehaviour
 
     void OnTimerStart(bool isStarting)
     {
-        content.SetActive(isStarting);
+        //content.SetActive(isStarting);
         startingText.gameObject.SetActive(isStarting);
     }
 
@@ -76,7 +68,7 @@ public class GameUI : MonoBehaviour
 
     void OnRoundTimerChange(float elapsedTime, bool show)
     {
-        content.SetActive(show);
+        //content.SetActive(show);
 
         if (elapsedTime.Equals(-1)) return;
         

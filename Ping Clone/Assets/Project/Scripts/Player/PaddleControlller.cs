@@ -15,11 +15,9 @@ public class PaddleControlller : NetworkBehaviour
 
     public override void Spawned()
     {
-        if (HasInputAuthority)
-        {
-            Debug.Log("Paddle spawned!");
-        }
+        if (!HasInputAuthority) return;
         
+        Debug.Log("Paddle spawned!");
         bl_EventHandler.Match.DispatchInMatchStatus(true);
 
         _initPosition = transform.position;
@@ -51,14 +49,14 @@ public class PaddleControlller : NetworkBehaviour
     /// <summary>
     /// This handles everything input related when in Shared Mode.
     /// </summary>
-    private void FixedUpdate()
+    private void Update()
     {
         if (Runner.ProvideInput) return;
         if (GameManager.Instance.IsGameDone || GameManager.Instance.IsGamePaused) return;
         
-        float yDir = Keyboard.current.wKey.wasPressedThisFrame ? 1 : Keyboard.current.sKey.wasPressedThisFrame ? -1 : 0;
+        float yDir = Keyboard.current.wKey.isPressed ? 1 : Keyboard.current.sKey.isPressed ? -1 : 0;
             
-        float newY = Mathf.Clamp(transform.position.y + (yDir * Speed) * Runner.DeltaTime, NetworkHandler.Instance.BottomBound, NetworkHandler.Instance.TopBound);
+        float newY = Mathf.Clamp(transform.position.y + (yDir * Speed) * Time.deltaTime, NetworkHandler.Instance.BottomBound, NetworkHandler.Instance.TopBound);
         _transform.position = new Vector3(_transform.position.x, newY, _transform.position.z);
     }
 

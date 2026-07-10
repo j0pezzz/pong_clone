@@ -1,4 +1,5 @@
 using Fusion;
+using Project.Internal.Utility;
 using UnityEngine.SceneManagement;
 
 namespace Project.Scripts.Game
@@ -6,6 +7,7 @@ namespace Project.Scripts.Game
     /// <summary>
     /// Handles everything game state related.
     /// </summary>
+    /// HasStateAuthority needs to be used instead of HasInputAuthority because this is a scene NetworkObject.
     public class GameManager : NetworkBehaviour
     {
         [Networked] public int Player1Points { get; private set; }
@@ -25,7 +27,7 @@ namespace Project.Scripts.Game
             bl_EventHandler.Match.OnTeamPointAdd += AddPoint;
             _changeDetector = GetChangeDetector(ChangeDetector.Source.SimulationState);
 
-            if (HasInputAuthority)
+            if (HasStateAuthority)
             {
                 IsGamePaused = true;
                 IsGameDone = false;
@@ -51,7 +53,6 @@ namespace Project.Scripts.Game
                     case nameof(Player2Points):
                         bl_EventHandler.GameplayUI.DispatchPointsChange(Player1Points, Player2Points);
                         ValidatePointRequirement(Player1Points, Player2Points);
-                        //TODO: we could here check if either team reached the required amount of points.
                         break;
                 }
             }
@@ -66,36 +67,15 @@ namespace Project.Scripts.Game
                 IsGameDone = true;
 
                 // Get the winner and send an RPC to both players that the game is done.
-                Team winningTeam = DetermineWinner();
-                RPC_GameFinish(winningTeam);
+                Team winningTeam = UtilityHelper.DetermineWinner(player1Points, player2Points, RequiredPoints);
+                GameUI.Instance.GameFinish.ShowFinish(winningTeam);
+                bl_EventHandler.Match.DispatchGameFinish();
             }
-        }
-        
-        Team DetermineWinner()
-        {
-            if (Player1Points >= RequiredPoints)
-            {
-                return Team.Team1;
-            }
-
-            if (Player2Points >= RequiredPoints)
-            {
-                return Team.Team2;
-            }
-
-            return Team.None;
-        }
-        
-        [Rpc(RpcSources.All, RpcTargets.All)]
-        public void RPC_GameFinish(Team winnerTeam)
-        {
-            GameUI.Instance.GameFinish.ShowFinish(winnerTeam);
-            bl_EventHandler.Match.DispatchGameFinish();
         }
 
         void AddPoint(Team team)
         {
-            if (!HasInputAuthority) return;
+            if (!HasStateAuthority) return;
 
             if (team == Team.None)
             {
@@ -120,7 +100,7 @@ namespace Project.Scripts.Game
         /// </summary>
         void OnGameStart()
         {
-            if (!HasInputAuthority) return;
+            if (!HasStateAuthority) return;
             
             NetworkHandler.Instance.SpawnBall();
                 
@@ -134,7 +114,6 @@ namespace Project.Scripts.Game
         
         //TODO: this is very WIP, this is probably the easiest way to handle restarting the match.
         // not yet tested.
-        
         /// <summary>
         /// Invoked when the game has to be restarted.
         /// </summary>
@@ -149,7 +128,7 @@ namespace Project.Scripts.Game
         /// <param name="isPaused"></param>
         void OnGamePaused(bool isPaused)
         {
-            if (!HasInputAuthority) return;
+            if (!HasStateAuthority) return;
             
             IsGamePaused = isPaused;
         }

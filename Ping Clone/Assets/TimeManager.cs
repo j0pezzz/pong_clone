@@ -6,6 +6,7 @@ using UnityEngine;
 /// <summary>
 /// Handles everything time related.
 /// </summary>
+/// HasStateAuthority needs to be used instead of HasInputAuthority because this is a scene NetworkObject.
 public class TimeManager : NetworkBehaviour
 {
     [Networked] public TickTimer StartingTimer { get; set; }
@@ -45,8 +46,6 @@ public class TimeManager : NetworkBehaviour
     /// </summary>
     public override void Render()
     {
-        base.Render();
-
         if (StartingTimer.Expired(Runner) && !_startTimerExpired)
         {
             //Debug.LogWarning("GameTimer (Render): Start Timer expired!");
@@ -55,7 +54,7 @@ public class TimeManager : NetworkBehaviour
             bl_EventHandler.Match.DispatchGameStart();
             bl_EventHandler.Match.DispatchTimerStart(false);
             bl_EventHandler.Match.DispatchGlobalGamePause(false);
-            OnNewRound();
+            bl_EventHandler.Match.DispatchNewRound();
         }
 
         if (StartingTimer.IsRunning && !_startTimerExpired)

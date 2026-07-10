@@ -36,7 +36,7 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
     public bool IsOnline { get; private set; }
     public GameModes currentGameModes;
     public bool isMobile;
-    public bool IsHost => _serverNetworkRunner.IsServer || _serverNetworkRunner.IsSharedModeMasterClient;
+    public bool IsHost => _serverNetworkRunner && (_serverNetworkRunner.IsServer || _serverNetworkRunner.IsSharedModeMasterClient);
     #endregion
 
     #region Private Members
@@ -286,6 +286,30 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
         cacheBall.SetBallToInit();
     }
 
+    void SpawnPaddleController(PlayerRef playerRef, Action<NetworkObject> onComplete)
+    {
+        // Get spawn point based on PlayerId. Host will be always 1 so he will get SpawnPoint1 and Client SpawnPoint2.
+        Vector3 spawnPoint = playerRef.PlayerId == 1 ? SpawnPointManager.Instance.SpawnPoint1 : SpawnPointManager.Instance.SpawnPoint2;
+
+        string spawnName = spawnPoint == SpawnPointManager.Instance.SpawnPoint1 ? "SpawnPoint 1" : "SpawnPoint 2";
+
+        Debug.Log($"[GameController]: Spawning {playerRef} to {spawnName}");
+        
+        _serverNetworkRunner.SpawnAsync(PlayerController, spawnPoint, Quaternion.identity, playerRef, null, 0, 
+            onSpawnComplete =>
+            {
+                if (!onSpawnComplete.Object)
+                {
+                    Debug.LogError("[NetworkHandler]: Spawned session player missing NetworkObject!");
+                    onComplete?.Invoke(null);
+                    return;
+                }
+            
+                _serverNetworkRunner.SetPlayerObject(playerRef, onSpawnComplete.Object);
+                onComplete?.Invoke(onSpawnComplete.Object);
+            });
+    }
+
     NetworkObject SpawnPlayerOnline(PlayerRef playerRef)
     {
         // Get spawn point based on PlayerId. Host will be always 1 so he will get SpawnPoint1 and Client SpawnPoint2.
@@ -379,7 +403,7 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
             Debug.Log("[GameController]: Not enough players, waiting for more players.");
 
             bl_EventHandler.Match.DispatchGlobalGamePause(true);
-            bl_EventHandler.Match.DispatchWaitingStatus(true);
+            bl_EventHandler.Match.DispatchWaitingPlayers(true);
 
             //DEBUG:
 
@@ -390,9 +414,15 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
         {
             Debug.LogWarning("[GameController]: Enough players, starting in 10 seconds.");
 
-            bl_EventHandler.Match.DispatchWaitingStatus(false);
+            bl_EventHandler.Match.DispatchWaitingPlayers(false);
             bl_EventHandler.Match.DispatchTimerStart(true);
         }
+    }
+
+    public void Disconnect()
+    {
+        ShutdownAll();
+        SceneManager.LoadScene("MainMenu");
     }
 
     #region Fusion Callbacks
@@ -403,12 +433,18 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
         // If we are the Host, we spawn player characters.
         if (!IsHost) return;
         
-        NetworkObject spawnedPlayer = SpawnPlayerOnline(player);
+        SpawnPaddleController(player, networkObject =>
+        {
+            // Cache the NetworkObject for later use.
+            _spawnedPlayers.Add(player, networkObject);
+        });
+        
+        //NetworkObject spawnedPlayer = SpawnPlayerOnline(player);
 
-        runner.SetPlayerObject(player, spawnedPlayer);
+        //runner.SetPlayerObject(player, spawnedPlayer);
 
         // Cache the NetworkObject for later use.
-        _spawnedPlayers.Add(player, spawnedPlayer);
+        //_spawnedPlayers.Add(player, spawnedPlayer);
 
         if (IsOnline)
         {
@@ -416,7 +452,7 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
         }
         else
         {
-            bl_EventHandler.Match.DispatchWaitingStatus(false);
+            bl_EventHandler.Match.DispatchWaitingPlayers(false);
             bl_EventHandler.Match.DispatchTimerStart(true);
         }
     }
