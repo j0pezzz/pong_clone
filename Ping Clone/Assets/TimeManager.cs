@@ -35,7 +35,7 @@ public class TimeManager : NetworkBehaviour
         StartingTimer = TickTimer.CreateFromSeconds(Runner, 10);
     }
 
-    public void OnNewRound()
+    public void OnNewRound(int requiredPoints)
     {
         InitialTick = Runner.Tick;
         if (!_roundStart) _roundStart = true;
@@ -54,7 +54,7 @@ public class TimeManager : NetworkBehaviour
             bl_EventHandler.Match.DispatchGameStart();
             bl_EventHandler.Match.DispatchTimerStart(false);
             bl_EventHandler.Match.DispatchGlobalGamePause(false);
-            bl_EventHandler.Match.DispatchNewRound();
+            bl_EventHandler.Match.DispatchNewRound(Runner.SessionInfo.GetGameSettings().RequiredPoints);
         }
 
         if (StartingTimer.IsRunning && !_startTimerExpired)

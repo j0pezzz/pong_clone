@@ -14,14 +14,14 @@ public static class bl_EventHandler
         public static Action<bool> onMatch;
         public static void DispatchInMatchStatus(bool inMatch) => onMatch?.Invoke(inMatch);
 
-        public static Action<bool> OnWaitingPlayers;
-        public static void DispatchWaitingPlayers(bool waiting) => OnWaitingPlayers?.Invoke(waiting);
+        public static Action<bool, string> OnWaitingPlayers;
+        public static void DispatchWaitingPlayers(bool waiting, string sessionName = null) => OnWaitingPlayers?.Invoke(waiting, sessionName);
 
         public static Action<bool> OnTimerStart;
         public static void DispatchTimerStart(bool isStarting) => OnTimerStart?.Invoke(isStarting);
 
-        public static Action OnNewRound;
-        public static void DispatchNewRound() => OnNewRound?.Invoke();
+        public static Action<int> OnNewRound;
+        public static void DispatchNewRound(int requiredPoints) => OnNewRound?.Invoke(requiredPoints);
 
         public static Action<bool> OnGlobalGamePause;
         public static void DispatchGlobalGamePause(bool paused) => OnGlobalGamePause?.Invoke(paused);

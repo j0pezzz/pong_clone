@@ -31,7 +31,7 @@ namespace Project.Scripts.Game
             {
                 IsGamePaused = true;
                 IsGameDone = false;
-                RequiredPoints = NetworkHandler.GameRequiredPoints;
+                RequiredPoints = Runner.SessionInfo.GetGameSettings().RequiredPoints;
             }
         }
 
@@ -105,7 +105,7 @@ namespace Project.Scripts.Game
             NetworkHandler.Instance.SpawnBall();
                 
             // If we are playing against AI, spawn AI.
-            if (NetworkHandler.Instance.currentGameModes == GameModes.PvE)
+            if (Runner.SessionInfo.GetGameSettings().GameMode == GameModes.PvE)
             {
                 NetworkHandler.Instance.SpawnAI();
             }

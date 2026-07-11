@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Project.Internal.Structures;
+using Project.Internal.Utility;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
@@ -26,15 +28,10 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
 
     [NonSerialized]
     NetworkRunner _serverNetworkRunner;
-
-    public SessionInfo SessionInfo { get; private set; }
     #endregion
 
     #region Public Properties
-    public static int GameRequiredPoints { get; private set; } = 5;
-    public static AIDifficulty AIDifficulty { get; private set; }
     public bool IsOnline { get; private set; }
-    public GameModes currentGameModes;
     public bool isMobile;
     public bool IsHost => _serverNetworkRunner && (_serverNetworkRunner.IsServer || _serverNetworkRunner.IsSharedModeMasterClient);
     #endregion
@@ -100,7 +97,13 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
 
         SceneRef sceneRef = SceneRef.FromIndex(SceneUtility.GetBuildIndexByScenePath(InitialScenePath));
 
-        Task serverTask = InitializeRunner(_serverNetworkRunner, mode, NetAddress.Any(), sceneRef, sessionName);
+        SGameSettings settings = new SGameSettings
+        {
+            GameMode = GameModes.PvP,
+            RequiredPoints = requiredPoints
+        };
+        
+        Task serverTask = InitializeHostNetworkRunner(_serverNetworkRunner, mode, NetAddress.Any(), sceneRef, sessionName, settings);
 
         bl_EventHandler.Menu.DispatchRoomCreate(true);
 
@@ -118,10 +121,6 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
 
         Debug.Log($"[GameController]: {_serverNetworkRunner.name} NetworkRunner is initialized");
 
-        SessionInfo = _serverNetworkRunner.SessionInfo;
-
-        GameRequiredPoints = requiredPoints;
-
         yield return new WaitForEndOfFrame();
     }
 
@@ -135,7 +134,7 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
 
         SceneRef sceneRef = SceneRef.FromIndex(SceneUtility.GetBuildIndexByScenePath(InitialScenePath));
 
-        Task joinTask = InitializeRunner(client, mode, NetAddress.Any(), sceneRef, sessionName);
+        Task joinTask = InitializeClientNetworkRunner(client, mode, NetAddress.Any(), sceneRef, sessionName);
 
         bl_EventHandler.Menu.DispatchRoomJoin(true);
 
@@ -166,7 +165,14 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
 
         SceneRef sceneRef = SceneRef.FromIndex(SceneUtility.GetBuildIndexByScenePath(InitialScenePath));
 
-        Task serverTask = InitializeRunner(_serverNetworkRunner, GameMode.Single, NetAddress.Any(), sceneRef, sessionName);
+        SGameSettings settings = new()
+        {
+            GameMode = GameModes.PvE,
+            RequiredPoints = requiredPoints,
+            AIDifficulty = difficulty,
+        };
+        
+        Task serverTask = InitializeHostNetworkRunner(_serverNetworkRunner, GameMode.Single, NetAddress.Any(), sceneRef, sessionName, settings);
 
         bl_EventHandler.Menu.DispatchRoomCreate(true);
 
@@ -184,16 +190,11 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
 
         Debug.Log($"[GameController]: {_serverNetworkRunner.name} is initialized");
 
-        SessionInfo = _serverNetworkRunner.SessionInfo;
-
-        GameRequiredPoints = requiredPoints;
-        currentGameModes = gameModes;
-        AIDifficulty = difficulty;
-
         yield return new WaitForEndOfFrame();
     }
 
-    protected async Task InitializeRunner(NetworkRunner runner, GameMode gameMode, NetAddress address, SceneRef sceneRef, string sessionName)
+    async Task InitializeHostNetworkRunner(NetworkRunner runner, GameMode mode, NetAddress netAddress, SceneRef sceneRef,
+        string sessionName, SGameSettings gameSettings)
     {
         runner.TryGetComponent(out INetworkSceneManager sceneManager);
         if (sceneManager == null)
@@ -209,7 +210,7 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
             objectProvider = runner.gameObject.AddComponent<NetworkObjectProviderDefault>();
         }
 
-        runner.ProvideInput = gameMode != GameMode.Shared;
+        runner.ProvideInput = mode == GameMode.Server || mode == GameMode.Host || mode == GameMode.Single;
 
         // If using this implementation, Server needs to load that scene once Session created ??
         /*
@@ -218,6 +219,58 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
         {
             sceneInfo.AddSceneRef(sceneRef, LoadSceneMode.Additive);
         }*/
+
+        Dictionary<string, SessionProperty> sessionProperties = new()
+        {
+            { "Settings", gameSettings.ToJson() }
+        };
+
+        runner.AddCallbacks(this);
+
+        StartGameResult result = await runner.StartGame(new StartGameArgs
+        {
+            GameMode = mode,
+            Address = netAddress,
+            Scene = sceneRef,
+            SessionName = sessionName,
+            SceneManager = sceneManager,
+            ObjectProvider = objectProvider,
+            PlayerCount = 2,
+            SessionProperties = sessionProperties,
+            IsOpen = true,
+            IsVisible = true
+        });
+
+        if (!result.Ok)
+        {
+            Debug.LogError($"GameController (InitializeRunner): {result.ShutdownReason}");
+            if (result.ShutdownReason == ShutdownReason.GameNotFound)
+            {
+                bl_EventHandler.Menu.DispatchNoRoomToJoin(result.ErrorMessage);
+            }
+
+            ShutdownAll();
+        }
+    }
+
+    async Task InitializeClientNetworkRunner(NetworkRunner runner, GameMode gameMode, NetAddress address,
+        SceneRef sceneRef, string sessionName)
+    {
+        runner.TryGetComponent(out INetworkSceneManager sceneManager);
+        if (sceneManager == null)
+        {
+            Debug.LogError($"NetworkRunner does not have any component implementing {nameof(INetworkSceneManager)}");
+            sceneManager = runner.gameObject.AddComponent<NetworkSceneManagerDefault>();
+        }
+
+        runner.TryGetComponent(out INetworkObjectProvider objectProvider);
+        if (objectProvider == null)
+        {
+            Debug.LogError($"NetworkRunner does not have any component implementing {nameof(INetworkObjectProvider)}");
+            objectProvider = runner.gameObject.AddComponent<NetworkObjectProviderDefault>();
+        }
+
+        runner.ProvideInput = gameMode == GameMode.Client;
 
         runner.AddCallbacks(this);
 
@@ -280,13 +333,13 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
             aiController.SetToInit();
         }
 
-        bl_EventHandler.Match.DispatchNewRound();
-        TimeManager.Instance.OnNewRound();
+        bl_EventHandler.Match.DispatchNewRound(_serverNetworkRunner.SessionInfo.GetGameSettings().RequiredPoints);
+        TimeManager.Instance.OnNewRound(-1);
 
         cacheBall.SetBallToInit();
     }
 
-    void SpawnPaddleController(PlayerRef playerRef, Action<NetworkObject> onComplete)
+    void SpawnPaddleController(NetworkRunner runner, PlayerRef playerRef, Action<NetworkObject> onComplete)
     {
         // Get spawn point based on PlayerId. Host will be always 1 so he will get SpawnPoint1 and Client SpawnPoint2.
         Vector3 spawnPoint = playerRef.PlayerId == 1 ? SpawnPointManager.Instance.SpawnPoint1 : SpawnPointManager.Instance.SpawnPoint2;
@@ -295,6 +348,7 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
 
         Debug.Log($"[GameController]: Spawning {playerRef} to {spawnName}");
         
+        //TODO: need to figure out if we can set NetworkTransform values before the NetworkObject is spawned, probably not since it might be baked.
         _serverNetworkRunner.SpawnAsync(PlayerController, spawnPoint, Quaternion.identity, playerRef, null, 0, 
             onSpawnComplete =>
             {
@@ -305,7 +359,7 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
                     return;
                 }
             
-                _serverNetworkRunner.SetPlayerObject(playerRef, onSpawnComplete.Object);
+                runner.SetPlayerObject(playerRef, onSpawnComplete.Object);
                 onComplete?.Invoke(onSpawnComplete.Object);
             });
     }
@@ -403,7 +457,7 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
             Debug.Log("[GameController]: Not enough players, waiting for more players.");
 
             bl_EventHandler.Match.DispatchGlobalGamePause(true);
-            bl_EventHandler.Match.DispatchWaitingPlayers(true);
+            bl_EventHandler.Match.DispatchWaitingPlayers(true, runner.SessionInfo.Name);
 
             //DEBUG:
 
@@ -433,7 +487,7 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
         // If we are the Host, we spawn player characters.
         if (!IsHost) return;
         
-        SpawnPaddleController(player, networkObject =>
+        SpawnPaddleController(runner, player, networkObject =>
         {
             // Cache the NetworkObject for later use.
             _spawnedPlayers.Add(player, networkObject);
