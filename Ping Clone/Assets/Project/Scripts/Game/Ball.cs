@@ -1,4 +1,5 @@
 using Fusion;
+using Project.Internal.Utility;
 using Project.Scripts.Game;
 using UnityEngine;
 
@@ -13,6 +14,8 @@ public class Ball : NetworkBehaviour
     public Rigidbody rb;
     public MapPrefabs mapPrefabs;
 
+    [Networked] private TickTimer SpeedIncreaseTimer { get; set; }
+
     Vector3 _initPos;
     Vector3 _pausedVelocity;
     float _xDir, _yDir;
@@ -20,7 +23,6 @@ public class Ball : NetworkBehaviour
     float _lastSpeedIncrementTime;
     GameObject _paddle1, _paddle2;
     AIController _paddleController1, _paddleController2;
-    bool _initialLaunchDone;
 
     public override void Spawned()
     {
@@ -28,6 +30,7 @@ public class Ball : NetworkBehaviour
 
         _initPos = transform.position;
 
+        SpeedIncreaseTimer = TickTimer.CreateFromSeconds(Runner, SpeedIncrement);
         LaunchBall();
         bl_EventHandler.Match.OnGlobalGamePause += OnGamePaused;
     }
@@ -39,41 +42,38 @@ public class Ball : NetworkBehaviour
 
     public override void FixedUpdateNetwork()
     {
+        // If match is finished, stop the ball.
         if (GameManager.Instance.IsGameDone)
         {
             rb.linearVelocity = Vector3.zero;
             return;
         }
-
-        if (_initialLaunchDone)
+        
+        if (SpeedIncreaseTimer.Expired(Runner))
         {
-            _elapsedTime = (Runner.Tick - TimeManager.InitialTick) / (float)Runner.TickRate;
-
-            if (_elapsedTime - _lastSpeedIncrementTime >= SpeedIncrement)
-            {
-                Speed = Mathf.Min(Speed * SpeedIncrementFactor, MaxSpeed);
-
-                _lastSpeedIncrementTime = _elapsedTime;
-
-                Debug.Log($"Increased speed to {Speed}");
-            }
-        }
-        else
-        {
-            LaunchBall();
-            _initialLaunchDone = true;
+            Speed = Mathf.Min(Speed * SpeedIncrementFactor, MaxSpeed);
+            Debug.Log($"Increased speed to {Speed}");
+            
+            SpeedIncreaseTimer = TickTimer.CreateFromSeconds(Runner, SpeedIncrement);
         }
     }
 
     void OnGamePaused(bool paused)
     {
+        float speedIncrementTime = 0;
+        
         if (paused)
         {
+            speedIncrementTime = SpeedIncreaseTimer.GetSecondsFloat(Runner);
+            SpeedIncreaseTimer = new TickTimer();
             _pausedVelocity = rb.linearVelocity;
             rb.linearVelocity = Vector3.zero;
         }
         else
         {
+            if (_pausedVelocity == Vector3.zero) return;
+
+            SpeedIncreaseTimer = TickTimer.CreateFromSeconds(Runner, speedIncrementTime);
             rb.linearVelocity = _pausedVelocity;
         }
     }
@@ -82,7 +82,7 @@ public class Ball : NetworkBehaviour
     {
         if (!NetworkHandler.Instance.IsHost) return;
         if (GameManager.Instance.IsGameDone) return;
-
+    
         transform.position = _initPos;
         LaunchBall();
     }
@@ -135,15 +135,10 @@ public class Ball : NetworkBehaviour
 
         Team scoringTeam = GetScoringTeam(other.gameObject.tag);
 
-        if (scoringTeam != Team.None)
-        {
-            bl_EventHandler.Match.DispatchPointAddition(scoringTeam);
-
-            //Note: Disable these when training.
-            SetBallToInit();
-
-            NetworkHandler.Instance.ResetGame();
-        }
+        if (scoringTeam == Team.None) return;
+        
+        bl_EventHandler.Match.DispatchPointAddition(scoringTeam);
+        NetworkHandler.Instance.ResetGame();
     }
 
     Team GetScoringTeam(string nameTag)

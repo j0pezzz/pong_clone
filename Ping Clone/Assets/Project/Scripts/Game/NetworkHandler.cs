@@ -37,11 +37,11 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
     #endregion
 
     #region Private Members
-    Dictionary<int, PaddleControlller> playerControllers = new();
-    Dictionary<int, AIController> aiControllers = new();
+    Dictionary<int, PaddleControlller> offlinePaddleControllers = new();
+    Dictionary<int, AIController> aiPaddleControllers = new();
     [HideInInspector] public Ball cacheBall;
     Vector3 _spawnPoint;
-    readonly Dictionary<PlayerRef, NetworkObject> _spawnedPlayers = new();
+    readonly Dictionary<PlayerRef, NetworkObject> _spawnedPaddles = new();
     #endregion
 
     void Awake()
@@ -315,20 +315,20 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
 
     public void ResetGame()
     {
-        foreach (NetworkObject nObj in _spawnedPlayers.Values)
+        foreach (NetworkObject nObj in _spawnedPaddles.Values)
         {
-            if (nObj.HasInputAuthority && nObj.TryGetComponent(out PaddleControlller controller))
+            if (nObj.HasStateAuthority && nObj.TryGetComponent(out PaddleControlller controller))
             {
                 controller.SetPlayerToInitPosition();
             }
         }
 
-        foreach (PaddleControlller controller in playerControllers.Values)
+        foreach (PaddleControlller controller in offlinePaddleControllers.Values)
         {
             controller.SetPlayerToInitPosition();
         }
 
-        foreach (AIController aiController in aiControllers.Values)
+        foreach (AIController aiController in aiPaddleControllers.Values)
         {
             aiController.SetToInit();
         }
@@ -348,8 +348,15 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
 
         Debug.Log($"[GameController]: Spawning {playerRef} to {spawnName}");
         
-        //TODO: need to figure out if we can set NetworkTransform values before the NetworkObject is spawned, probably not since it might be baked.
-        _serverNetworkRunner.SpawnAsync(PlayerController, spawnPoint, Quaternion.identity, playerRef, null, 0, 
+        _serverNetworkRunner.SpawnAsync(PlayerController, spawnPoint, Quaternion.identity, playerRef, (nRunner, nObject) =>
+            {
+                if (nObject.TryGetComponent(out NetworkTransform networkTransform))
+                {
+                    // This makes sure the movement is smooth in/not in Shared Mode.
+                    networkTransform.ConfigFlags =
+                        runner.GameMode == GameMode.Shared ? NetworkTransform.NetworkTransformFlags.DisableSharedModeInterpolation : NetworkTransform.NetworkTransformFlags.None;
+                }
+            }, 0, 
             onSpawnComplete =>
             {
                 if (!onSpawnComplete.Object)
@@ -396,7 +403,7 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
             if (playerObject.TryGetComponent(out PaddleControlller controller))
             {
                 controller.PlayerRef = i + 1;
-                playerControllers.Add(i + 1, controller);
+                offlinePaddleControllers.Add(i + 1, controller);
             }
         }
     }
@@ -422,7 +429,7 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
                 Debug.LogError("No AIController script attached to AI");
             }
 
-            aiControllers.Add(i + 1, aiController);
+            aiPaddleControllers.Add(i + 1, aiController);
 
             if (aiSpawnPoint == SpawnPointManager.Instance.SpawnPoint2)
             {
@@ -490,7 +497,7 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
         SpawnPaddleController(runner, player, networkObject =>
         {
             // Cache the NetworkObject for later use.
-            _spawnedPlayers.Add(player, networkObject);
+            _spawnedPaddles.Add(player, networkObject);
         });
         
         //NetworkObject spawnedPlayer = SpawnPlayerOnline(player);
@@ -518,10 +525,10 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
         Debug.Log($"[GameController]: {player} left");
         
         // Despawn the NetworkObject and remove it from the Dictionary.
-        if (_spawnedPlayers.TryGetValue(player, out NetworkObject nObj))
+        if (_spawnedPaddles.TryGetValue(player, out NetworkObject nObj))
         {
             runner.Despawn(nObj);
-            _spawnedPlayers.Remove(player);
+            _spawnedPaddles.Remove(player);
         }
             
         // Since a player left, it means we the Host are alone.

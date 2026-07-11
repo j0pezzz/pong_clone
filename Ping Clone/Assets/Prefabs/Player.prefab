@@ -149,6 +149,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Speed: 5
+  networkTransform: {fileID: 5955753868139183353}
   PlayerRef: 1
 --- !u!114 &5955753868139183353
 MonoBehaviour:

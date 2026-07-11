@@ -7,11 +7,12 @@ public class PaddleControlller : NetworkBehaviour
 {
     [Networked] public NetworkButtons ButtonsPrevious { get; set; }
     [Range(1, 5)] public float Speed = 5f;
+    [SerializeField] NetworkTransform networkTransform;
 
     public int PlayerRef = 1;
 
     Transform _transform;
-    Vector3 _initPosition;
+    private float _originalYPosition;
 
     public override void Spawned()
     {
@@ -20,8 +21,8 @@ public class PaddleControlller : NetworkBehaviour
         Debug.Log("Paddle spawned!");
         bl_EventHandler.Match.DispatchInMatchStatus(true);
 
-        _initPosition = transform.position;
         _transform = transform;
+        _originalYPosition = _transform.position.y;
     }
 
     /// <summary>
@@ -70,6 +71,8 @@ public class PaddleControlller : NetworkBehaviour
 
     public void SetPlayerToInitPosition()
     {
-        _transform.position = _initPosition;
+        Vector3 resetPosition = _transform.position;
+        resetPosition.y = _originalYPosition;
+        networkTransform.Teleport(resetPosition);
     }
 }
