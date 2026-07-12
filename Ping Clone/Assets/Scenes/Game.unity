@@ -890,6 +890,7 @@ GameObject:
   m_Component:
   - component: {fileID: 308678383}
   - component: {fileID: 308678382}
+  - component: {fileID: 308678384}
   m_Layer: 0
   m_Name: Player 1 Goal
   m_TagString: Player 1 Goal
@@ -933,6 +934,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &308678384
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 308678381}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1125813b63bf4e83ae10a4a131bb38fc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Project.Scripts.Game.Goal
+  playerTeam: 0
 --- !u!1 &344015993
 GameObject:
   m_ObjectHideFlags: 0
@@ -2157,6 +2171,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1098801854}
   - component: {fileID: 1098801853}
+  - component: {fileID: 1098801855}
   m_Layer: 0
   m_Name: Player 2 Goal
   m_TagString: Player 2 Goal
@@ -2200,6 +2215,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1098801855
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1098801852}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1125813b63bf4e83ae10a4a131bb38fc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Project.Scripts.Game.Goal
+  playerTeam: 1
 --- !u!1 &1129614602
 GameObject:
   m_ObjectHideFlags: 0

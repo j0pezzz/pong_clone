@@ -1,18 +1,14 @@
 using Fusion;
+using Project.Internal.Abstract;
 using Project.Scripts.Game;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-public class PaddleControlller : NetworkBehaviour
+public class PaddleControlller : PaddleBase
 {
     [Networked] public NetworkButtons ButtonsPrevious { get; set; }
-    [Range(1, 5)] public float Speed = 5f;
-    [SerializeField] NetworkTransform networkTransform;
-
-    public int PlayerRef = 1;
-
-    Transform _transform;
-    private float _originalYPosition;
+    
+    private float _yDir;
 
     public override void Spawned()
     {
@@ -20,9 +16,6 @@ public class PaddleControlller : NetworkBehaviour
         
         Debug.Log("Paddle spawned!");
         bl_EventHandler.Match.DispatchInMatchStatus(true);
-
-        _transform = transform;
-        _originalYPosition = _transform.position.y;
     }
 
     /// <summary>
@@ -39,12 +32,10 @@ public class PaddleControlller : NetworkBehaviour
 
             float yDir = data.Buttons.IsSet(Buttons.Up) ? 1 : data.Buttons.IsSet(Buttons.Down) ? -1 : 0;
 
-            float newY = Mathf.Clamp(_transform.position.y + (yDir * Speed) * Runner.DeltaTime, NetworkHandler.Instance.BottomBound, NetworkHandler.Instance.TopBound);
-            _transform.position = new Vector3(_transform.position.x, newY, _transform.position.z);
+            float newY = Mathf.Clamp(transform.position.y + (yDir * speed) * Runner.DeltaTime, NetworkHandler.Instance.BottomBound, NetworkHandler.Instance.TopBound);
+            transform.position = new Vector3(transform.position.x, newY, transform.position.z);
         }
     }
-
-    private float _yDir;
 
     /// <summary>
     /// This handles everything input related when in Shared Mode.
@@ -65,14 +56,7 @@ public class PaddleControlller : NetworkBehaviour
         if (Runner.ProvideInput) return;
         if (GameManager.Instance.IsGameDone || GameManager.Instance.IsGamePaused) return;
         
-        float newY = Mathf.Clamp(transform.position.y + (_yDir * Speed) * Time.deltaTime, NetworkHandler.Instance.BottomBound, NetworkHandler.Instance.TopBound);
-        _transform.position = new Vector3(_transform.position.x, newY, _transform.position.z);
-    }
-
-    public void SetPlayerToInitPosition()
-    {
-        Vector3 resetPosition = _transform.position;
-        resetPosition.y = _originalYPosition;
-        networkTransform.Teleport(resetPosition);
+        float newY = Mathf.Clamp(transform.position.y + (_yDir * speed) * Time.deltaTime, NetworkHandler.Instance.BottomBound, NetworkHandler.Instance.TopBound);
+        transform.position = new Vector3(transform.position.x, newY, transform.position.z);
     }
 }

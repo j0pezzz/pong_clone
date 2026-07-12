@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Project.Internal.Abstract;
 using Project.Internal.Structures;
 using Project.Internal.Utility;
 using UnityEngine;
@@ -37,8 +38,6 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
     #endregion
 
     #region Private Members
-    Dictionary<int, PaddleControlller> offlinePaddleControllers = new();
-    Dictionary<int, AIController> aiPaddleControllers = new();
     [HideInInspector] public Ball cacheBall;
     Vector3 _spawnPoint;
     readonly Dictionary<PlayerRef, NetworkObject> _spawnedPaddles = new();
@@ -317,26 +316,16 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
     {
         foreach (NetworkObject nObj in _spawnedPaddles.Values)
         {
-            if (nObj.HasStateAuthority && nObj.TryGetComponent(out PaddleControlller controller))
+            if (nObj.HasStateAuthority && nObj.TryGetComponent(out PaddleBase controller))
             {
-                controller.SetPlayerToInitPosition();
+                controller.SetToInitPosition();
             }
         }
-
-        foreach (PaddleControlller controller in offlinePaddleControllers.Values)
-        {
-            controller.SetPlayerToInitPosition();
-        }
-
-        foreach (AIController aiController in aiPaddleControllers.Values)
-        {
-            aiController.SetToInit();
-        }
+        
+        cacheBall.SetBallToInit();
 
         bl_EventHandler.Match.DispatchNewRound(_serverNetworkRunner.SessionInfo.GetGameSettings().RequiredPoints);
         TimeManager.Instance.OnNewRound(-1);
-
-        cacheBall.SetBallToInit();
     }
 
     void SpawnPaddleController(NetworkRunner runner, PlayerRef playerRef, Action<NetworkObject> onComplete)
@@ -390,24 +379,6 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
         return nObj;
     }
 
-    void SpawnPlayersOffline(int amount = 2)
-    {
-        for (int i = 0; i < amount; i++)
-        {
-            _spawnPoint = i == 0 ? SpawnPointManager.Instance.SpawnPoint1 : SpawnPointManager.Instance.SpawnPoint2;
-
-            GameObject playerObject = Instantiate(PlayerController, _spawnPoint, Quaternion.identity);
-            playerObject.name = $"Player{i + 1}";
-            playerObject.tag = $"Paddle{i + 1}";
-
-            if (playerObject.TryGetComponent(out PaddleControlller controller))
-            {
-                controller.PlayerRef = i + 1;
-                offlinePaddleControllers.Add(i + 1, controller);
-            }
-        }
-    }
-
     /// <summary>
     /// Spawns AI.
     /// </summary>
@@ -418,28 +389,24 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
         
         for (int i = 0; i < amount; i++)
         {
+            PlayerRef botRef = PlayerRef.FromIndex(_serverNetworkRunner.ActivePlayers.Count() + 1);
+            
             Vector3 aiSpawnPoint = amount == 1 ? SpawnPointManager.Instance.SpawnPoint2 : i == 0 ? SpawnPointManager.Instance.SpawnPoint1 : SpawnPointManager.Instance.SpawnPoint2;
-
-            GameObject aiObject = Instantiate(AIPrefab, aiSpawnPoint, Quaternion.identity);
-            aiObject.name = $"AI {i + 1}";
-            aiObject.tag = $"Paddle2";
-
-            if (!aiObject.TryGetComponent(out AIController aiController))
+            
+            _serverNetworkRunner.SpawnAsync(AIPrefab, aiSpawnPoint, Quaternion.identity, _serverNetworkRunner.LocalPlayer, (nRunner, nObject) =>
+                {
+                    if (nObject.TryGetComponent(out NetworkTransform networkTransform))
+                    {
+                        // This makes sure the movement is smooth in/not in Shared Mode.
+                        networkTransform.ConfigFlags = NetworkTransform.NetworkTransformFlags.None;
+                    }
+                }, 0, onComplete =>
             {
-                Debug.LogError("No AIController script attached to AI");
-            }
-
-            aiPaddleControllers.Add(i + 1, aiController);
-
-            if (aiSpawnPoint == SpawnPointManager.Instance.SpawnPoint2)
-            {
-                aiController.IsLeftSide = false;
-                aiObject.transform.Rotate(0, 180, 0);
-            }
-            else
-            {
-                aiController.IsLeftSide = true;
-            }
+                onComplete.Object.gameObject.name = $"AI {i + 1}";
+                onComplete.Object.gameObject.tag = "Paddle2";
+            
+                _spawnedPaddles.Add(botRef, onComplete.Object);
+            });
         }
     }
 

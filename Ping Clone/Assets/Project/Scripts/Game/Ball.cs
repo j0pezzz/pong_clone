@@ -1,4 +1,5 @@
 using Fusion;
+using Project.Internal.Abstract;
 using Project.Internal.Utility;
 using Project.Scripts.Game;
 using UnityEngine;
@@ -12,23 +13,18 @@ public class Ball : NetworkBehaviour
     [Tooltip("Speed Multiplier")]
     public float SpeedIncrementFactor = 1.1f;
     public Rigidbody rb;
-    public MapPrefabs mapPrefabs;
 
     [Networked] private TickTimer SpeedIncreaseTimer { get; set; }
 
-    Vector3 _initPos;
+    Vector3 _originalPosition;
     Vector3 _pausedVelocity;
     float _xDir, _yDir;
-    float _elapsedTime;
-    float _lastSpeedIncrementTime;
-    GameObject _paddle1, _paddle2;
-    AIController _paddleController1, _paddleController2;
 
     public override void Spawned()
     {
         if (!NetworkHandler.Instance.IsHost) return;
 
-        _initPos = transform.position;
+        _originalPosition = transform.position;
 
         SpeedIncreaseTimer = TickTimer.CreateFromSeconds(Runner, SpeedIncrement);
         LaunchBall();
@@ -83,7 +79,7 @@ public class Ball : NetworkBehaviour
         if (!NetworkHandler.Instance.IsHost) return;
         if (GameManager.Instance.IsGameDone) return;
     
-        transform.position = _initPos;
+        transform.position = _originalPosition;
         LaunchBall();
     }
 
@@ -101,58 +97,20 @@ public class Ball : NetworkBehaviour
         rb.linearVelocity = launchDir * Speed;
     }
 
-    void OnCollisionEnter(Collision collision)
+    void OnCollisionEnter(Collision enterCollider)
     {
         if (!NetworkHandler.Instance.IsHost) return;
-
         if (GameManager.Instance.IsGameDone) return;
 
-        if (collision.gameObject.CompareTag("Paddle1"))
-        {
-            float y = HitFactor(transform.position, collision.transform.position, collision.collider.bounds.size.y);
+        if (!enterCollider.gameObject.TryGetComponent(out PaddleBase paddle)) return;
+        
+        float yDir = HitFactor(transform.position, enterCollider.transform.position, enterCollider.collider.bounds.size.y);
+        float xDir = rb.linearVelocity.x > 0 ? 1 : -1;
+        
+        Vector2 direction = new Vector2(xDir, yDir).normalized;
 
-            Vector2 direction = new Vector2(1, y).normalized;
-
-            rb.linearVelocity = direction * Speed;
-        }
-        else if (collision.gameObject.CompareTag("Paddle2"))
-        {
-            float y = HitFactor(transform.position, collision.transform.position, collision.collider.bounds.size.y);
-
-            Vector2 direction = new Vector2(-1, y).normalized;
-
-            rb.linearVelocity = direction * Speed;
-        }
+        rb.linearVelocity = direction * Speed;
     }
 
     float HitFactor(Vector2 ballPos, Vector2 playerPos, float playerHeight) => (ballPos.y - playerPos.y) / playerHeight;
-
-    void OnTriggerEnter(Collider other)
-    {
-        if (!NetworkHandler.Instance.IsHost) return;
-
-        if (GameManager.Instance.IsGameDone) return;
-
-        Team scoringTeam = GetScoringTeam(other.gameObject.tag);
-
-        if (scoringTeam == Team.None) return;
-        
-        bl_EventHandler.Match.DispatchPointAddition(scoringTeam);
-        NetworkHandler.Instance.ResetGame();
-    }
-
-    Team GetScoringTeam(string nameTag)
-    {
-        if (nameTag == "Player 1 Goal")
-        {
-            return Team.Team2;
-        }
-        
-        if (nameTag == "Player 2 Goal")
-        {
-            return Team.Team1;
-        }
-
-        return Team.None;
-    }
 }
