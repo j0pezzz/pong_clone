@@ -9,6 +9,7 @@ Game does use networked physics.
 - Classic Ping Pong gameplay: Hit the ball with your paddle, and try to score against your enemy.
 - Local multiplayer (not currently working): Play against a friend on the same device.
 - Play against a friend, or AI.
+- Mobile Support (being implemented).
 
 ## Controls
 - Use the W (up) and S (down) keys to control your paddle.
