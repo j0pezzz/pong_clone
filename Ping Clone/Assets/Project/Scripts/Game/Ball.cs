@@ -19,13 +19,15 @@ public class Ball : NetworkBehaviour
     Vector3 _originalPosition;
     Vector3 _pausedVelocity;
     float _xDir, _yDir;
-
+    private float _originalSpeed;
+    
     public override void Spawned()
     {
         if (!NetworkHandler.Instance.IsHost) return;
 
         _originalPosition = transform.position;
 
+        _originalSpeed = Speed;
         SpeedIncreaseTimer = TickTimer.CreateFromSeconds(Runner, SpeedIncrement);
         LaunchBall();
         bl_EventHandler.Match.OnGlobalGamePause += OnGamePaused;
@@ -78,7 +80,8 @@ public class Ball : NetworkBehaviour
     {
         if (!NetworkHandler.Instance.IsHost) return;
         if (GameManager.Instance.IsGameDone) return;
-    
+
+        Speed = _originalSpeed;
         transform.position = _originalPosition;
         LaunchBall();
     }

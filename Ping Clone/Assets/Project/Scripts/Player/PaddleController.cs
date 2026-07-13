@@ -4,7 +4,7 @@ using Project.Scripts.Game;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-public class PaddleControlller : PaddleBase
+public class PaddleController : PaddleBase
 {
     [Networked] public NetworkButtons ButtonsPrevious { get; set; }
     
@@ -33,7 +33,10 @@ public class PaddleControlller : PaddleBase
             float yDir = data.Buttons.IsSet(Buttons.Up) ? 1 : data.Buttons.IsSet(Buttons.Down) ? -1 : 0;
 
             float newY = Mathf.Clamp(transform.position.y + (yDir * speed) * Runner.DeltaTime, NetworkHandler.Instance.BottomBound, NetworkHandler.Instance.TopBound);
-            transform.position = new Vector3(transform.position.x, newY, transform.position.z);
+
+            Vector3 newPosition = transform.position;
+            newPosition.y = newY;
+            transform.position = newPosition;
         }
     }
 
@@ -46,9 +49,6 @@ public class PaddleControlller : PaddleBase
         if (GameManager.Instance.IsGameDone || GameManager.Instance.IsGamePaused) return;
         
         _yDir = Keyboard.current.wKey.isPressed ? 1 : Keyboard.current.sKey.isPressed ? -1 : 0;
-            
-        //float newY = Mathf.Clamp(transform.position.y + (yDir * Speed) * Time.deltaTime, NetworkHandler.Instance.BottomBound, NetworkHandler.Instance.TopBound);
-        //_transform.position = new Vector3(_transform.position.x, newY, _transform.position.z);
     }
 
     private void FixedUpdate()
@@ -57,6 +57,9 @@ public class PaddleControlller : PaddleBase
         if (GameManager.Instance.IsGameDone || GameManager.Instance.IsGamePaused) return;
         
         float newY = Mathf.Clamp(transform.position.y + (_yDir * speed) * Time.deltaTime, NetworkHandler.Instance.BottomBound, NetworkHandler.Instance.TopBound);
-        transform.position = new Vector3(transform.position.x, newY, transform.position.z);
+
+        Vector3 newPosition = transform.position;
+        newPosition.y = newY;
+        transform.position = newPosition;
     }
 }
