@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AIGameSettings
   aiSettings:
   - difficulty: 0
-    maxTrackingOffset: 3
-  - difficulty: 1
     maxTrackingOffset: 2
+  - difficulty: 1
+    maxTrackingOffset: 1.5
   - difficulty: 2
-    maxTrackingOffset: 1
+    maxTrackingOffset: 0.5

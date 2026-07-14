@@ -10,11 +10,12 @@ GameObject:
   m_Component:
   - component: {fileID: 7313529584736468446}
   - component: {fileID: 5915034091369831600}
+  - component: {fileID: 5955753868139183353}
   - component: {fileID: 2973530773221832323}
   - component: {fileID: 5222961818174807237}
   - component: {fileID: 7972098715034572466}
   - component: {fileID: 186150808307296591}
-  - component: {fileID: 5955753868139183353}
+  - component: {fileID: 6221109029436480521}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -57,7 +58,48 @@ MonoBehaviour:
   NetworkedBehaviours:
   - {fileID: 5955753868139183353}
   - {fileID: 186150808307296591}
+  - {fileID: 6221109029436480521}
   ForceRemoteRenderTimeframe: 0
+--- !u!114 &5955753868139183353
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4994095831586146826}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  ConfigFlags: -1
+  PhysicsSettings:
+    ForecastEnabled: 1
+    DebugPhysics: 0
+    GravityForecast: 2
+    MaxExtrapolationTime: 0.15
+    MinLinearDetectedError: 0.02
+    MinAngularDetectedError: 3
+    MaxLinearError: 0
+    MaxAngularError: 0
+    LowCorrectionProgressThreshold: 0.015
+    HighErrorSimilarityThreshold: 1
+    MaxErrorTotalTime: 0.5
+    MaxRemoteSleepIgnoreTime: 0.5
+    ErrorCorrectionType: 0
+    LinearVelCorrectionMul: 1
+    AngularVelCorrectionMul: 1
+    PositionCorrectionLerp: 0.15
+    RotationCorrectionLerp: 0.15
+    Spring: 75
+    Damper: 2
+    MinImpactfulCollisionAlignment: 0.3
+    ImpactStartCorrectionTime: 0.1
+    ImpactCorrectionTimeComplete: 0.3
 --- !u!33 &2973530773221832323
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -148,10 +190,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1f80966b2f8c01f49b52ad3f539ba56f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Speed: 5
+  speed: 5
   networkTransform: {fileID: 5955753868139183353}
-  PlayerRef: 1
---- !u!114 &5955753868139183353
+  inputHandler: {fileID: 6221109029436480521}
+--- !u!114 &6221109029436480521
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -160,34 +202,6 @@ MonoBehaviour:
   m_GameObject: {fileID: 4994095831586146826}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Script: {fileID: 11500000, guid: b05dc62903114c6aa45bd397399b175a, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: 
-  _stateAuthorityChangeErrorCorrectionDelta: 0
-  SyncScale: 0
-  SyncParent: 0
-  _autoAOIOverride: 1
-  ConfigFlags: -1
-  PhysicsSettings:
-    ForecastEnabled: 1
-    DebugPhysics: 0
-    GravityForecast: 2
-    MaxExtrapolationTime: 0.15
-    MinLinearDetectedError: 0.02
-    MinAngularDetectedError: 3
-    MaxLinearError: 0
-    MaxAngularError: 0
-    LowCorrectionProgressThreshold: 0.015
-    HighErrorSimilarityThreshold: 1
-    MaxErrorTotalTime: 0.5
-    MaxRemoteSleepIgnoreTime: 0.5
-    ErrorCorrectionType: 0
-    LinearVelCorrectionMul: 1
-    AngularVelCorrectionMul: 1
-    PositionCorrectionLerp: 0.15
-    RotationCorrectionLerp: 0.15
-    Spring: 75
-    Damper: 2
-    MinImpactfulCollisionAlignment: 0.3
-    ImpactStartCorrectionTime: 0.1
-    ImpactCorrectionTimeComplete: 0.3
+  m_EditorClassIdentifier: Assembly-CSharp::Project.Scripts.Runtime.Player.PaddleInputHandler

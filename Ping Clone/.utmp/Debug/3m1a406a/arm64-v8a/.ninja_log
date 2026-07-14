@@ -1,12 +1,23 @@
 # ninja log v5
+0	1562	1783685610243403404	GameActivity/CMakeFiles/game.dir/UGAApplication.cpp.o	15bf2c0ba83e77c6
 4	327	1783685609016302206	FramePacing/CMakeFiles/swappywrapper.dir/UnitySwappyWrapper.cpp.o	ac0ff5dbe3d3476f
+1805	1856	1783685610551344411	/home/j0pezz/Documents/GitHub/pong_clone/Ping Clone/Library/PramData/AndroidApplicationController/Cache/com.BeginnerGames.PingClone/gradle-project/unityLibrary/build/intermediates/cxx/Debug/3m1a406a/obj/arm64-v8a/libgame.so	f511c2e64c38ffba
+2	1385	1783685610074331293	GameActivity/CMakeFiles/game.dir/UGAInputKeyEvent.cpp.o	24b94ef4a9143219
 328	450	1783685609134305450	/home/j0pezz/Documents/GitHub/pong_clone/Ping Clone/Library/PramData/AndroidApplicationController/Cache/com.BeginnerGames.PingClone/gradle-project/unityLibrary/build/intermediates/cxx/Debug/3m1a406a/obj/arm64-v8a/libswappywrapper.so	74f1df49b7bc3dd1
-1	1269	1783685609957028837	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	48c54ae619583f8c
-4	1322	1783685610006444790	GameActivity/CMakeFiles/game.dir/UGASoftKeyboard.cpp.o	5a1fcbe6cb084b77
+2	1640	1783685610325758898	GameActivity/CMakeFiles/game.dir/UGAInput.cpp.o	d6190f443daa3fb8
 1	1360	1783685610050892688	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	b8573cba2eb6205
 1	1375	1783685610065013138	GameActivity/CMakeFiles/game.dir/UGAEntry.cpp.o	a1bb5b9b39f739d
-2	1385	1783685610074331293	GameActivity/CMakeFiles/game.dir/UGAInputKeyEvent.cpp.o	24b94ef4a9143219
-0	1562	1783685610243403404	GameActivity/CMakeFiles/game.dir/UGAApplication.cpp.o	15bf2c0ba83e77c6
-2	1640	1783685610325758898	GameActivity/CMakeFiles/game.dir/UGAInput.cpp.o	d6190f443daa3fb8
+1	1269	1783685609957028837	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	48c54ae619583f8c
 4	1804	1783685610488405067	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	e1086af603c64064
-1805	1856	1783685610551344411	/home/j0pezz/Documents/GitHub/pong_clone/Ping Clone/Library/PramData/AndroidApplicationController/Cache/com.BeginnerGames.PingClone/gradle-project/unityLibrary/build/intermediates/cxx/Debug/3m1a406a/obj/arm64-v8a/libgame.so	f511c2e64c38ffba
+4	1322	1783685610006444790	GameActivity/CMakeFiles/game.dir/UGASoftKeyboard.cpp.o	5a1fcbe6cb084b77
+8	190	1784037617547312129	FramePacing/CMakeFiles/swappywrapper.dir/UnitySwappyWrapper.cpp.o	ac0ff5dbe3d3476f
+191	282	1784037617631313462	/home/j0pezz/Documents/GitHub/pong_clone/Ping Clone/Library/PramData/AndroidApplicationController/Cache/com.BeginnerGames.PingClone/gradle-project/unityLibrary/build/intermediates/cxx/Debug/3m1a406a/obj/arm64-v8a/libswappywrapper.so	74f1df49b7bc3dd1
+6	873	1784037618223155644	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	b8573cba2eb6205
+6	890	1784037618241450931	GameActivity/CMakeFiles/game.dir/UGAEntry.cpp.o	a1bb5b9b39f739d
+8	958	1784037618309743454	GameActivity/CMakeFiles/game.dir/UGASoftKeyboard.cpp.o	5a1fcbe6cb084b77
+6	959	1784037618310893599	GameActivity/CMakeFiles/game.dir/UGAInputKeyEvent.cpp.o	24b94ef4a9143219
+7	960	1784037618309029157	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	e1086af603c64064
+6	1013	1784037618363806924	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	48c54ae619583f8c
+6	1037	1784037618386681000	GameActivity/CMakeFiles/game.dir/UGAInput.cpp.o	d6190f443daa3fb8
+5	1113	1784037618463230369	GameActivity/CMakeFiles/game.dir/UGAApplication.cpp.o	15bf2c0ba83e77c6
+1113	1150	1784037618505327347	/home/j0pezz/Documents/GitHub/pong_clone/Ping Clone/Library/PramData/AndroidApplicationController/Cache/com.BeginnerGames.PingClone/gradle-project/unityLibrary/build/intermediates/cxx/Debug/3m1a406a/obj/arm64-v8a/libgame.so	f511c2e64c38ffba

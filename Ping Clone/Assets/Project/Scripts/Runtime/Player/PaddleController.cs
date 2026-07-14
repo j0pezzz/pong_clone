@@ -1,6 +1,7 @@
 using Fusion;
 using Project.Internal.Abstract;
 using Project.Scripts.Game;
+using Project.Scripts.Runtime.Player;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -9,6 +10,7 @@ using UnityEngine.InputSystem;
 /// </summary>
 public class PaddleController : PaddleBase
 {
+    [SerializeField] private PaddleInputHandler inputHandler;
     [Networked] public NetworkButtons ButtonsPrevious { get; set; }
     
     private float _yDir;
@@ -22,13 +24,25 @@ public class PaddleController : PaddleBase
     }
 
     /// <summary>
-    /// This handles everything input related when in Host/Client/Single Mode.
+    /// This handles everything inputs when in Host/Client/Single Mode + not a mobile device.
     /// </summary>
     public override void FixedUpdateNetwork()
     {
-        if (!Runner.ProvideInput) return;
         if (GameManager.Instance.IsGameDone || GameManager.Instance.IsGamePaused) return;
 
+        // This is used when on Mobile + playing against AI (GameMode.Single)
+        if (GameData.Instance.GetCurrentPlatform().IsMobile)
+        {
+            float yDir = inputHandler.SInputs.MoveUpwards ? 1 : inputHandler.SInputs.MoveDownwards ? -1 : 0;
+
+            float newY = Mathf.Clamp(transform.position.y + (yDir * speed) * Runner.DeltaTime, NetworkHandler.Instance.BottomBound, NetworkHandler.Instance.TopBound);
+
+            Vector3 newPosition = transform.position;
+            newPosition.y = newY;
+            transform.position = newPosition;
+            return;
+        }
+        
         if (GetInput(out NetworkInputData data))
         {
             ButtonsPrevious = data.Buttons;
@@ -44,14 +58,21 @@ public class PaddleController : PaddleBase
     }
 
     /// <summary>
-    /// This handles everything input related when in Shared Mode.
+    /// This handles everything inputs when in Shared Mode + not a mobile device.
     /// </summary>
     private void Update()
     {
         if (Runner.ProvideInput) return;
         if (GameManager.Instance.IsGameDone || GameManager.Instance.IsGamePaused) return;
-        
-        _yDir = Keyboard.current.wKey.isPressed ? 1 : Keyboard.current.sKey.isPressed ? -1 : 0;
+
+        if (GameData.Instance.GetCurrentPlatform().IsMobile)
+        {
+            _yDir = inputHandler.SInputs.MoveUpwards ? 1 : inputHandler.SInputs.MoveDownwards ? -1 : 0;
+        }
+        else
+        {
+            _yDir = Keyboard.current.wKey.isPressed ? 1 : Keyboard.current.sKey.isPressed ? -1 : 0;   
+        }
     }
 
     private void FixedUpdate()
@@ -60,7 +81,7 @@ public class PaddleController : PaddleBase
         if (GameManager.Instance.IsGameDone || GameManager.Instance.IsGamePaused) return;
         
         float newY = Mathf.Clamp(transform.position.y + (_yDir * speed) * Time.deltaTime, NetworkHandler.Instance.BottomBound, NetworkHandler.Instance.TopBound);
-
+        
         Vector3 newPosition = transform.position;
         newPosition.y = newY;
         transform.position = newPosition;

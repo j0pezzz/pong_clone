@@ -1,4 +1,5 @@
 using System;
+using Project.Scripts.Runtime.Player;
 
 public static class bl_EventHandler
 {
@@ -37,6 +38,12 @@ public static class bl_EventHandler
 
         public static Action<Team> OnTeamPointAdd;
         public static void DispatchPointAddition(Team team) => OnTeamPointAdd?.Invoke(team);
+
+        public static class Player
+        {
+            public static Action<float> OnMobilePlayerMove;
+            public static void DispatchPlayerMove(float direction) => OnMobilePlayerMove?.Invoke(direction);
+        }
     }
 
     public static class Menu

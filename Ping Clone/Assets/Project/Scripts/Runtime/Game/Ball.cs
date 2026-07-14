@@ -13,6 +13,7 @@ public class Ball : NetworkBehaviour
     [Tooltip("Speed Multiplier")]
     public float SpeedIncrementFactor = 1.1f;
     public Rigidbody rb;
+    [SerializeField] private NetworkTransform networkTransform;
 
     [Networked] private TickTimer SpeedIncreaseTimer { get; set; }
 
@@ -82,7 +83,7 @@ public class Ball : NetworkBehaviour
         if (GameManager.Instance.IsGameDone) return;
 
         Speed = _originalSpeed;
-        transform.position = _originalPosition;
+        networkTransform.Teleport(_originalPosition);
         LaunchBall();
     }
 

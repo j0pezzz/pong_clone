@@ -9,8 +9,9 @@ namespace Project.Scripts.Game
 
         private void OnTriggerEnter(Collider enterCollider)
         {
+            if (!NetworkHandler.Instance.IsHost) return;
             if (!enterCollider.gameObject.TryGetComponent(out Ball ball)) return;
-            
+               
             bl_EventHandler.Match.DispatchPointAddition(playerTeam.GetOppositeTeam());
             NetworkHandler.Instance.ResetGame();
         }

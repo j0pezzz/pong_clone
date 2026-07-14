@@ -54,7 +54,7 @@ MonoBehaviour:
   SpeedIncrement: 30
   SpeedIncrementFactor: 1.5
   rb: {fileID: 3370194145226746745}
-  mapPrefabs: {fileID: 0}
+  networkTransform: {fileID: 3609072157332579669}
 --- !u!54 &3370194145226746745
 Rigidbody:
   m_ObjectHideFlags: 0

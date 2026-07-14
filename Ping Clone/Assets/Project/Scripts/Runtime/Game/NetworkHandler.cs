@@ -28,16 +28,17 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
     public Color LoserColor = Color.red;
 
     [NonSerialized]
-    NetworkRunner _serverNetworkRunner;
+    NetworkRunner _serverNetworkRunner, _clientNetworkRunner;
     #endregion
 
     #region Public Properties
     public bool IsOnline { get; private set; }
-    public bool IsHost => _serverNetworkRunner && (_serverNetworkRunner.IsServer || _serverNetworkRunner.IsSharedModeMasterClient);
+    public bool IsHost => CurrentRunner.IsServer || CurrentRunner.IsSharedModeMasterClient;
+    public NetworkRunner CurrentRunner => _serverNetworkRunner ? _serverNetworkRunner : _clientNetworkRunner;
     #endregion
 
     #region Private Members
-    [HideInInspector] public Ball cacheBall;
+    [HideInInspector] public Ball _networkBall;
     Vector3 _spawnPoint;
     readonly Dictionary<PlayerRef, NetworkObject> _spawnedPaddles = new();
     #endregion
@@ -126,15 +127,15 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
 
     public System.Collections.IEnumerator JoinRoom(string sessionName)
     {
-        NetworkRunner client = Instantiate(RunnerPrefab);
-        DontDestroyOnLoad(client);
+        _clientNetworkRunner = Instantiate(RunnerPrefab);
+        DontDestroyOnLoad(_clientNetworkRunner);
 
         GameMode mode = GameData.Instance.GetCurrentPlatform().IsMobile ? GameMode.Shared : GameMode.Client;
-        client.name = $"{mode} {UnityEngine.Random.Range(1, 9999)}";
+        _clientNetworkRunner.name = $"{mode} {UnityEngine.Random.Range(1, 9999)}";
 
         SceneRef sceneRef = SceneRef.FromIndex(SceneUtility.GetBuildIndexByScenePath(InitialScenePath));
 
-        Task joinTask = InitializeClientNetworkRunner(client, mode, NetAddress.Any(), sceneRef, sessionName);
+        Task joinTask = InitializeClientNetworkRunner(_clientNetworkRunner, mode, NetAddress.Any(), sceneRef, sessionName);
 
         bl_EventHandler.Menu.DispatchRoomJoin(true);
 
@@ -160,8 +161,10 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
         string sessionName = UnityEngine.Random.Range(0, 99999).ToString();
         Debug.Log($"[GameController]: Generated session name = {sessionName}");
 
+        // Even when playing against AI, we do need to use Shared Mode for mobile devices instead of Single, because Single is basically like Host Mode.
+        GameMode mode = GameData.Instance.GetCurrentPlatform().IsMobile ? GameMode.Single : GameMode.Single;
         _serverNetworkRunner = Instantiate(RunnerPrefab);
-        _serverNetworkRunner.name = $"{GameMode.Single} NetworkRunner";
+        _serverNetworkRunner.name = $"{mode} NetworkRunner";
 
         SceneRef sceneRef = SceneRef.FromIndex(SceneUtility.GetBuildIndexByScenePath(InitialScenePath));
 
@@ -172,7 +175,7 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
             AIDifficulty = difficulty,
         };
         
-        Task serverTask = InitializeHostNetworkRunner(_serverNetworkRunner, GameMode.Single, NetAddress.Any(), sceneRef, sessionName, settings);
+        Task serverTask = InitializeHostNetworkRunner(_serverNetworkRunner, mode, NetAddress.Any(), sceneRef, sessionName, settings, false);
 
         bl_EventHandler.Menu.DispatchRoomCreate(true);
 
@@ -194,7 +197,7 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
     }
 
     async Task InitializeHostNetworkRunner(NetworkRunner runner, GameMode mode, NetAddress netAddress, SceneRef sceneRef,
-        string sessionName, SGameSettings gameSettings)
+        string sessionName, SGameSettings gameSettings, bool openSession = true)
     {
         runner.TryGetComponent(out INetworkSceneManager sceneManager);
         if (sceneManager == null)
@@ -211,7 +214,8 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
         }
 
         runner.ProvideInput = mode == GameMode.Server || mode == GameMode.Host || mode == GameMode.Single;
-
+        //Debug.Log(runner.ProvideInput);
+        
         // If using this implementation, Server needs to load that scene once Session created ??
         /*
         NetworkSceneInfo sceneInfo = new();
@@ -237,7 +241,7 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
             ObjectProvider = objectProvider,
             PlayerCount = 2,
             SessionProperties = sessionProperties,
-            IsOpen = true,
+            IsOpen = openSession,
             IsVisible = true
         });
 
@@ -323,7 +327,7 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
             }
         }
         
-        cacheBall.SetBallToInit();
+        _networkBall.SetBallToInit();
 
         bl_EventHandler.Match.DispatchNewRound(_serverNetworkRunner.SessionInfo.GetGameSettings().RequiredPoints);
         TimeManager.Instance.OnNewRound(-1);
@@ -338,7 +342,7 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
 
         Debug.Log($"[GameController]: Spawning {playerRef} to {spawnName}");
         
-        _serverNetworkRunner.SpawnAsync(PlayerController, spawnPoint, Quaternion.identity, playerRef, (nRunner, nObject) =>
+        CurrentRunner.SpawnAsync(PlayerController, spawnPoint, Quaternion.identity, playerRef, (nRunner, nObject) =>
             {
                 if (nObject.TryGetComponent(out NetworkTransform networkTransform))
                 {
@@ -416,10 +420,9 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
     /// </summary>
     public void SpawnBall()
     {
-        NetworkObject ball = _serverNetworkRunner.Spawn(BallPrefab, new Vector3(0, 0, -0.25f), Quaternion.identity, _serverNetworkRunner.LocalPlayer);
-        //GameObject ball = Instantiate(BallPrefab, new Vector3(0, 0, -0.25f), Quaternion.identity);
+        NetworkObject ball = _clientNetworkRunner.Spawn(BallPrefab, new Vector3(0, 0, -0.25f), Quaternion.identity, _serverNetworkRunner.LocalPlayer);
 
-        if (!ball.TryGetComponent(out cacheBall))
+        if (!ball.TryGetComponent(out _networkBall))
         {
             Debug.LogError("GameController (SpawnBall): no Ball script attached");
         }
@@ -458,22 +461,24 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
     public void OnPlayerJoined(NetworkRunner runner, PlayerRef player)
     {
         Debug.Log($"[GameController]: Player {player.PlayerId} joined! We are host/master client: {runner.IsServer || runner.IsSharedModeMasterClient}");
-        
-        // If we are the Host, we spawn player characters.
-        if (!IsHost) return;
-        
-        SpawnPaddleController(runner, player, networkObject =>
+
+        // Every player spawns their paddle them self in Shared Mode.
+        if (runner.GameMode == GameMode.Shared)
         {
-            // Cache the NetworkObject for later use.
-            _spawnedPaddles.Add(player, networkObject);
-        });
-        
-        //NetworkObject spawnedPlayer = SpawnPlayerOnline(player);
-
-        //runner.SetPlayerObject(player, spawnedPlayer);
-
-        // Cache the NetworkObject for later use.
-        //_spawnedPlayers.Add(player, spawnedPlayer);
+            SpawnPaddleController(runner, player, networkObject =>
+            {
+                // Cache the NetworkObject for later use.
+                _spawnedPaddles.Add(player, networkObject);
+            });
+        }
+        else if (runner.GameMode != GameMode.Shared && IsHost)
+        {
+            SpawnPaddleController(runner, player, networkObject =>
+            {
+                // Cache the NetworkObject for later use.
+                _spawnedPaddles.Add(player, networkObject);
+            });
+        }
 
         if (IsOnline)
         {
@@ -488,15 +493,16 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
 
     public void OnPlayerLeft(NetworkRunner runner, PlayerRef player)
     {
-        if (!IsHost) return;
-        
         Debug.Log($"[GameController]: {player} left");
         
-        // Despawn the NetworkObject and remove it from the Dictionary.
-        if (_spawnedPaddles.TryGetValue(player, out NetworkObject nObj))
+        if (runner.GameMode != GameMode.Shared && IsHost)
         {
-            runner.Despawn(nObj);
-            _spawnedPaddles.Remove(player);
+            // Despawn the NetworkObject and remove it from the Dictionary.
+            if (_spawnedPaddles.TryGetValue(player, out NetworkObject nObj))
+            {
+                runner.Despawn(nObj);
+                _spawnedPaddles.Remove(player);
+            }
         }
             
         // Since a player left, it means we the Host are alone.
@@ -504,9 +510,9 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
         bl_EventHandler.Match.DispatchGlobalGamePause(true);
         GameUI.Instance.PlayerLeft.SetActive(true);
 
-        if (cacheBall != null)
+        if (_networkBall != null)
         {
-            runner.Despawn(cacheBall.Object);
+            runner.Despawn(_networkBall.Object);
         }
 
         TimeManager.Instance.StartingTimer = TickTimer.None;
@@ -514,18 +520,14 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
 
     public void OnInput(NetworkRunner runner, NetworkInput input)
     {
-        if (runner.GameMode == GameMode.Shared) return;
+        // We don't want to use this when on mobile.
+        if (GameData.Instance.GetCurrentPlatform().IsMobile) return;
         
         NetworkInputData data = new();
 
         // W & S controls.
         data.Buttons.Set(Buttons.Up, Keyboard.current.wKey.isPressed);
         data.Buttons.Set(Buttons.Down, Keyboard.current.sKey.isPressed);
-
-        // If calling Arrow controls after W & S controls, only Arrow controls will work.
-        // Up & Down Arrow controls.
-        //data.Buttons.Set(Buttons.Up, Input.GetKey(KeyCode.UpArrow));
-        //data.Buttons.Set(Buttons.Down, Input.GetKey(KeyCode.DownArrow));
 
         input.Set(data);
     }

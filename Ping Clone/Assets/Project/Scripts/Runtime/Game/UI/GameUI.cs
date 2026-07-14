@@ -14,6 +14,7 @@ public class GameUI : MonoBehaviour
     [SerializeField] GameObject WaitingForPlayersUI;
     [SerializeField] TextMeshProUGUI SessionID;
     public GameObject PlayerLeft;
+    [SerializeField] private GameObject mobileControls;
     
     [Header("Time References")]
     [SerializeField] GameObject content;
@@ -22,6 +23,7 @@ public class GameUI : MonoBehaviour
 
     void Awake()
     {
+        mobileControls.SetActive(GameData.Instance.GetCurrentPlatform().IsMobile);
         MaxScoreText.gameObject.SetActive(false);
         bl_EventHandler.Match.OnTimerStart += OnTimerStart;
         bl_EventHandler.GameplayUI.OnStartingTimerChange += OnStartingTimerChanged;
@@ -80,8 +82,13 @@ public class GameUI : MonoBehaviour
         roundTimer.gameObject.SetActive(true);
     }
 
+    public void MovePlayer(float direction)
+    {
+        bl_EventHandler.Match.Player.DispatchPlayerMove(direction);
+    }
+
     /// <summary>
-    /// Leaving session causes all NetworkRunners to shutdown and loading 'MainMenu' scene.
+    /// Leaving session causes all NetworkRunners to shut down and loading 'MainMenu' scene.
     /// </summary>
     public void LeaveSession()
     {
