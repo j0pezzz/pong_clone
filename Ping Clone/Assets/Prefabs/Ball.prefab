@@ -49,7 +49,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dfc327dfd6e0fed46b505b8d01b71985, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Speed: 5
+  speed: 5
   MaxSpeed: 30
   SpeedIncrement: 30
   SpeedIncrementFactor: 1.5
@@ -79,7 +79,7 @@ Rigidbody:
   m_ImplicitTensor: 1
   m_UseGravity: 0
   m_IsKinematic: 0
-  m_Interpolate: 0
+  m_Interpolate: 1
   m_Constraints: 120
   m_CollisionDetection: 2
 --- !u!135 &3999903940395836109
@@ -144,7 +144,7 @@ MonoBehaviour:
   PhysicsSettings:
     ForecastEnabled: 1
     DebugPhysics: 0
-    GravityForecast: 2
+    GravityForecast: 1
     MaxExtrapolationTime: 0.15
     MinLinearDetectedError: 0.02
     MinAngularDetectedError: 3

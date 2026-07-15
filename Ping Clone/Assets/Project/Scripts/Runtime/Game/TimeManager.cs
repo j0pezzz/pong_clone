@@ -1,7 +1,6 @@
 using Fusion;
 using Project.Internal.Utility;
 using Project.Scripts.Game;
-using UnityEngine;
 
 /// <summary>
 /// Handles everything time related.
@@ -10,18 +9,13 @@ using UnityEngine;
 public class TimeManager : NetworkBehaviour
 {
     [Networked] public TickTimer StartingTimer { get; set; }
-
-    public static int InitialTick;
-    bool _roundStart;
-    bool _startTimerExpired;
-    private bool _isHost;
+    [Networked] private Tick InitialTick { get; set; }
+    [Networked] private NetworkBool RoundStart { get; set; }
 
     public override void Spawned()
     {
         bl_EventHandler.Match.OnNewRound += OnNewRound;
         bl_EventHandler.Match.OnTimerStart += OnTimerStart;
-
-        //bl_EventHandler.Match.DispatchGamePoints(RequiredPoints);
     }
 
     public override void Despawned(NetworkRunner runner, bool hasState)
@@ -38,7 +32,7 @@ public class TimeManager : NetworkBehaviour
     public void OnNewRound(int requiredPoints)
     {
         InitialTick = Runner.Tick;
-        if (!_roundStart) _roundStart = true;
+        RoundStart = true;
     }
 
     /// <summary>
@@ -46,25 +40,25 @@ public class TimeManager : NetworkBehaviour
     /// </summary>
     public override void Render()
     {
-        if (StartingTimer.Expired(Runner) && !_startTimerExpired)
+        if (StartingTimer.Expired(Runner))
         {
-            //Debug.LogWarning("GameTimer (Render): Start Timer expired!");
-            _startTimerExpired = true;
+            //Debug.LogWarning("GameTimer (Render): Start Timer expired!")
             
             bl_EventHandler.Match.DispatchGameStart();
             bl_EventHandler.Match.DispatchTimerStart(false);
             bl_EventHandler.Match.DispatchGlobalGamePause(false);
             bl_EventHandler.Match.DispatchNewRound(Runner.SessionInfo.GetGameSettings().RequiredPoints);
+            StartingTimer = TickTimer.None;
         }
 
-        if (StartingTimer.IsRunning && !_startTimerExpired)
+        if (StartingTimer.IsRunning)
         {
             float remainingSeconds = StartingTimer.GetSecondsFloat(Runner);
             
             bl_EventHandler.GameplayUI.DispatchStartingTimerChange(remainingSeconds);
         }
 
-        if (_roundStart && !GameManager.Instance.IsGameDone)
+        if (RoundStart && !GameManager.Instance.IsGameDone)
         {
             int elapsedTicks = Runner.Tick - InitialTick;
 

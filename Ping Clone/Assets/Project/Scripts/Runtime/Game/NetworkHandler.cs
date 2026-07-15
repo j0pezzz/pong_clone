@@ -89,7 +89,7 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
     {
         int.TryParse(points, out int requiredPoints);
         string sessionName = UnityEngine.Random.Range(0, 99999).ToString();
-        Debug.Log($"[GameController]: Generated session name = {sessionName}");
+        Debug.Log($"[NetworkHandler]: Generated session name = {sessionName}");
 
         GameMode mode = GameData.Instance.GetCurrentPlatform().IsMobile ? GameMode.Shared : GameMode.Host;
         
@@ -112,7 +112,7 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
 
         if (!serverTask.IsCompletedSuccessfully)
         {
-            Debug.LogError($"[GameController]: Failed to create a session. Exception: {serverTask.Exception}");
+            Debug.LogError($"[NetworkHandler]: Failed to create a session. Exception: {serverTask.Exception}");
 
             ShutdownAll();
             yield break;
@@ -120,7 +120,7 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
 
         bl_EventHandler.Menu.DispatchRoomCreate(false);
 
-        Debug.Log($"[GameController]: {_serverNetworkRunner.name} NetworkRunner is initialized");
+        Debug.Log($"[NetworkHandler]: {_serverNetworkRunner.name} NetworkRunner is initialized");
 
         yield return new WaitForEndOfFrame();
     }
@@ -143,7 +143,7 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
 
         if (!joinTask.IsCompletedSuccessfully)
         {
-            Debug.LogError($"GameController (JoinRoom): {joinTask.Exception}");
+            Debug.LogError($"[NetworkHandler]: Failed to join session {sessionName}. Exception: {joinTask.Exception}");
 
             ShutdownAll();
             yield break;
@@ -159,12 +159,10 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
     {
         int.TryParse(points, out int requiredPoints);
         string sessionName = UnityEngine.Random.Range(0, 99999).ToString();
-        Debug.Log($"[GameController]: Generated session name = {sessionName}");
-
-        // Even when playing against AI, we do need to use Shared Mode for mobile devices instead of Single, because Single is basically like Host Mode.
-        GameMode mode = GameData.Instance.GetCurrentPlatform().IsMobile ? GameMode.Single : GameMode.Single;
+        Debug.Log($"[NetworkHandler]: Generated session name = {sessionName}");
+        
         _serverNetworkRunner = Instantiate(RunnerPrefab);
-        _serverNetworkRunner.name = $"{mode} NetworkRunner";
+        _serverNetworkRunner.name = $"{GameMode.Single} NetworkRunner";
 
         SceneRef sceneRef = SceneRef.FromIndex(SceneUtility.GetBuildIndexByScenePath(InitialScenePath));
 
@@ -175,7 +173,7 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
             AIDifficulty = difficulty,
         };
         
-        Task serverTask = InitializeHostNetworkRunner(_serverNetworkRunner, mode, NetAddress.Any(), sceneRef, sessionName, settings, false);
+        Task serverTask = InitializeHostNetworkRunner(_serverNetworkRunner, GameMode.Single, NetAddress.Any(), sceneRef, sessionName, settings, false);
 
         bl_EventHandler.Menu.DispatchRoomCreate(true);
 
@@ -183,7 +181,7 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
 
         if (!serverTask.IsCompletedSuccessfully)
         {
-            Debug.LogError($"[GameController]: Failed to create local session. Exception: {serverTask.Exception}");
+            Debug.LogError($"[NetworkHandler]: Failed to create local session. Exception: {serverTask.Exception}");
 
             ShutdownAll();
             yield break;
@@ -191,7 +189,7 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
 
         bl_EventHandler.Menu.DispatchRoomCreate(false);
 
-        Debug.Log($"[GameController]: {_serverNetworkRunner.name} is initialized");
+        Debug.Log($"[NetworkHandler]: {_serverNetworkRunner.name} is initialized");
 
         yield return new WaitForEndOfFrame();
     }
@@ -247,7 +245,7 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
 
         if (!result.Ok)
         {
-            Debug.LogError($"GameController (InitializeRunner): {result.ShutdownReason}");
+            Debug.LogError($"[NetworkHandler]: Failed to start a session. Result: {result.ShutdownReason}");
             if (result.ShutdownReason == ShutdownReason.GameNotFound)
             {
                 bl_EventHandler.Menu.DispatchNoRoomToJoin(result.ErrorMessage);
@@ -291,7 +289,7 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
 
         if (!result.Ok)
         {
-            Debug.LogError($"GameController (InitializeRunner): {result.ShutdownReason}");
+            Debug.LogError($"[NetworkHandler]: Failed to start session joining. Result: {result.ShutdownReason}");
             if (result.ShutdownReason == ShutdownReason.GameNotFound)
             {
                 bl_EventHandler.Menu.DispatchNoRoomToJoin(result.ErrorMessage);
@@ -319,6 +317,8 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
 
     public void ResetGame()
     {
+        bl_EventHandler.Match.DispatchNewRound(CurrentRunner.SessionInfo.GetGameSettings().RequiredPoints);
+        TimeManager.Instance.OnNewRound(-1);
         foreach (NetworkObject nObj in _spawnedPaddles.Values)
         {
             if (nObj.HasStateAuthority && nObj.TryGetComponent(out PaddleBase controller))
@@ -326,11 +326,11 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
                 controller.SetToInitPosition();
             }
         }
-        
-        _networkBall.SetBallToInit();
 
-        bl_EventHandler.Match.DispatchNewRound(_serverNetworkRunner.SessionInfo.GetGameSettings().RequiredPoints);
-        TimeManager.Instance.OnNewRound(-1);
+        if (!IsHost) return;
+        
+        // Only the Host can return ball back to origin.
+        _networkBall.SetBallToInit();
     }
 
     void SpawnPaddleController(NetworkRunner runner, PlayerRef playerRef, Action<NetworkObject> onComplete)
@@ -340,7 +340,7 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
 
         string spawnName = spawnPoint == SpawnPointManager.Instance.SpawnPoint1 ? "SpawnPoint 1" : "SpawnPoint 2";
 
-        Debug.Log($"[GameController]: Spawning {playerRef} to {spawnName}");
+        Log.Info($"[NetworkHandler]: Spawning {playerRef} to {spawnName}");
         
         CurrentRunner.SpawnAsync(PlayerController, spawnPoint, Quaternion.identity, playerRef, (nRunner, nObject) =>
             {
@@ -372,10 +372,10 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
 
         string spawnName = _spawnPoint == SpawnPointManager.Instance.SpawnPoint1 ? "SpawnPoint 1" : "SpawnPoint 2";
 
-        Debug.Log($"[GameController]: Spawning {playerRef} to {spawnName}");
+        Log.Info($"[NetworkHandler]: Spawning {playerRef} to {spawnName}");
 
         // Might need to use 'SpawnAsync' instead of 'Spawn'.
-        NetworkObject nObj = _serverNetworkRunner.Spawn(PlayerController, _spawnPoint, Quaternion.identity, playerRef);
+        NetworkObject nObj = CurrentRunner.Spawn(PlayerController, _spawnPoint, Quaternion.identity, playerRef);
 
         // Host renames the GameObject for them self.
         nObj.gameObject.name = $"Player {playerRef.PlayerId}";
@@ -394,11 +394,11 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
         
         for (int i = 0; i < amount; i++)
         {
-            PlayerRef botRef = PlayerRef.FromIndex(_serverNetworkRunner.ActivePlayers.Count() + 1);
+            PlayerRef botRef = PlayerRef.FromIndex(CurrentRunner.ActivePlayers.Count() + 1);
             
             Vector3 aiSpawnPoint = amount == 1 ? SpawnPointManager.Instance.SpawnPoint2 : i == 0 ? SpawnPointManager.Instance.SpawnPoint1 : SpawnPointManager.Instance.SpawnPoint2;
             
-            _serverNetworkRunner.SpawnAsync(AIPrefab, aiSpawnPoint, Quaternion.identity, _serverNetworkRunner.LocalPlayer, (nRunner, nObject) =>
+            CurrentRunner.SpawnAsync(AIPrefab, aiSpawnPoint, Quaternion.identity, _serverNetworkRunner.LocalPlayer, (nRunner, nObject) =>
                 {
                     if (nObject.TryGetComponent(out NetworkTransform networkTransform))
                     {
@@ -420,11 +420,12 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
     /// </summary>
     public void SpawnBall()
     {
-        NetworkObject ball = _clientNetworkRunner.Spawn(BallPrefab, new Vector3(0, 0, -0.25f), Quaternion.identity, _serverNetworkRunner.LocalPlayer);
+        Debug.Log("SpawnBall()");
+        NetworkObject ball = CurrentRunner.Spawn(BallPrefab, new Vector3(0, 0, -0.25f), Quaternion.identity, CurrentRunner.LocalPlayer);
 
         if (!ball.TryGetComponent(out _networkBall))
         {
-            Debug.LogError("GameController (SpawnBall): no Ball script attached");
+            Debug.LogError("[NetworkHandler]: no Ball script attached");
         }
     }
 
@@ -432,7 +433,7 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
     {
         if (runner.ActivePlayers.Count() < 2)
         {
-            Debug.Log("[GameController]: Not enough players, waiting for more players.");
+            Debug.Log("[NetworkHandler]: Not enough players, waiting for more players.");
 
             bl_EventHandler.Match.DispatchGlobalGamePause(true);
             bl_EventHandler.Match.DispatchWaitingPlayers(true, runner.SessionInfo.Name);
@@ -444,7 +445,7 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
         }
         else
         {
-            Debug.LogWarning("[GameController]: Enough players, starting in 10 seconds.");
+            Debug.LogWarning("[NetworkHandler]: Enough players, starting in 10 seconds.");
 
             bl_EventHandler.Match.DispatchWaitingPlayers(false);
             bl_EventHandler.Match.DispatchTimerStart(true);
@@ -458,25 +459,25 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
     }
 
     #region Fusion Callbacks
-    public void OnPlayerJoined(NetworkRunner runner, PlayerRef player)
+    public void OnPlayerJoined(NetworkRunner runner, PlayerRef playerRef)
     {
-        Debug.Log($"[GameController]: Player {player.PlayerId} joined! We are host/master client: {runner.IsServer || runner.IsSharedModeMasterClient}");
+        Debug.Log($"[[NetworkHandler]: Player {playerRef.PlayerId} joined! We are host/master client: {runner.IsServer || runner.IsSharedModeMasterClient}");
 
         // Every player spawns their paddle them self in Shared Mode.
-        if (runner.GameMode == GameMode.Shared)
+        if (runner.GameMode == GameMode.Shared && playerRef == runner.LocalPlayer)
         {
-            SpawnPaddleController(runner, player, networkObject =>
+            SpawnPaddleController(runner, playerRef, networkObject =>
             {
                 // Cache the NetworkObject for later use.
-                _spawnedPaddles.Add(player, networkObject);
+                _spawnedPaddles.Add(playerRef, networkObject);
             });
         }
         else if (runner.GameMode != GameMode.Shared && IsHost)
         {
-            SpawnPaddleController(runner, player, networkObject =>
+            SpawnPaddleController(runner, playerRef, networkObject =>
             {
                 // Cache the NetworkObject for later use.
-                _spawnedPaddles.Add(player, networkObject);
+                _spawnedPaddles.Add(playerRef, networkObject);
             });
         }
 
@@ -493,7 +494,7 @@ public class NetworkHandler : SimulationBehaviour, INetworkRunnerCallbacks
 
     public void OnPlayerLeft(NetworkRunner runner, PlayerRef player)
     {
-        Debug.Log($"[GameController]: {player} left");
+        Log.Info($"[NetworkHandler]: {player} left");
         
         if (runner.GameMode != GameMode.Shared && IsHost)
         {

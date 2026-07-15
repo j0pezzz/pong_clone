@@ -6,7 +6,7 @@ using UnityEngine;
 
 public class Ball : NetworkBehaviour
 {
-    public float Speed = 5f;
+    public float speed = 5f;
     public float MaxSpeed = 30;
     [Tooltip("How often does each speed increment happen?")]
     public float SpeedIncrement = 30;
@@ -19,16 +19,14 @@ public class Ball : NetworkBehaviour
 
     Vector3 _originalPosition;
     Vector3 _pausedVelocity;
-    float _xDir, _yDir;
-    private float _originalSpeed;
+    private float _initialSpeed;
     
     public override void Spawned()
     {
         if (!NetworkHandler.Instance.IsHost) return;
 
         _originalPosition = transform.position;
-
-        _originalSpeed = Speed;
+        _initialSpeed = speed;
         SpeedIncreaseTimer = TickTimer.CreateFromSeconds(Runner, SpeedIncrement);
         LaunchBall();
         bl_EventHandler.Match.OnGlobalGamePause += OnGamePaused;
@@ -50,8 +48,8 @@ public class Ball : NetworkBehaviour
         
         if (SpeedIncreaseTimer.Expired(Runner))
         {
-            Speed = Mathf.Min(Speed * SpeedIncrementFactor, MaxSpeed);
-            Debug.Log($"Increased speed to {Speed}");
+            speed = Mathf.Min(speed * SpeedIncrementFactor, MaxSpeed);
+            Debug.Log($"Increased speed to {speed}");
             
             SpeedIncreaseTimer = TickTimer.CreateFromSeconds(Runner, SpeedIncrement);
         }
@@ -82,23 +80,24 @@ public class Ball : NetworkBehaviour
         if (!NetworkHandler.Instance.IsHost) return;
         if (GameManager.Instance.IsGameDone) return;
 
-        Speed = _originalSpeed;
+        speed = _initialSpeed;
         networkTransform.Teleport(_originalPosition);
         LaunchBall();
     }
 
     void LaunchBall()
     {
+        float xDir;
         do
         {
-            _xDir = Random.Range(-1f, 1f);
-        } while (Mathf.Abs(_xDir) < 0.5f);
+            xDir = Random.Range(-1f, 1f);
+        } while (Mathf.Abs(xDir) < 0.5f);
 
-        _yDir = Random.Range(-0.5f, 0.5f);
+        float yDir = Random.Range(-0.5f, 0.5f);
 
-        Vector3 launchDir = new Vector3(_xDir, _yDir, 0).normalized;
+        Vector3 launchDir = new Vector3(xDir, yDir, 0).normalized;
 
-        rb.linearVelocity = launchDir * Speed;
+        rb.linearVelocity = launchDir * speed;
     }
 
     void OnCollisionEnter(Collision enterCollider)
@@ -113,7 +112,7 @@ public class Ball : NetworkBehaviour
         
         Vector2 direction = new Vector2(xDir, yDir).normalized;
 
-        rb.linearVelocity = direction * Speed;
+        rb.linearVelocity = direction * speed;
     }
 
     float HitFactor(Vector2 ballPos, Vector2 playerPos, float playerHeight) => (ballPos.y - playerPos.y) / playerHeight;
