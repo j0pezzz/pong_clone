@@ -1,18 +1,18 @@
 # Pong Clone Game
 
 ## Description
-This is a simple Ping Pong game. 
-The game is developed using Unity and Photon Fusion 2. 
-Game does use networked physics.
+This is a very simple Ping Pong game, developed using Unity and Photon Fusion 2.
+This is/has been project to learn various things, like networking, etc.
 
 ## Features
 - Classic Ping Pong gameplay: Hit the ball with your paddle, and try to score against your enemy.
 - Local multiplayer (not currently working): Play against a friend on the same device.
 - Play against a friend, or AI.
-- Mobile Support (being implemented).
+- Mobile Support.
+- Networked Physics.
 
 ## Controls
-- Use the W (up) and S (down) keys to control your paddle.
+- On Windows, use the W (up) and S (down) keys to control your paddle, or on mobile the arrow keys which are in the Gameplay UI.
 
 ## How to Play
 - The goal is to hit the ball with your paddle, and make it pass your opponent's paddle.
