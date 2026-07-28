@@ -1,4 +1,4 @@
-# Pong Clone Game
+# Ping Pong Game Clone
 
 ## Description
 This is a very simple Ping Pong game, developed using Unity and Photon Fusion 2.
@@ -22,3 +22,6 @@ This is/has been project to learn various things, like networking, etc.
 2. Open the project in Unity.
 3. Make sure to use your own Photon AppID.
 4. Click on the play button to start the game.
+
+## Try it out here
+https://j0pezz.itch.io/ping-pong
