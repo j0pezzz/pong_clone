@@ -95,14 +95,14 @@
 				{
 					"directoryIndex" : 1,
 					"id" : "game::@d02bb112ea9f9c2ed29f",
-					"jsonFile" : "target-game-Debug-e6e09f20657ea86df76c.json",
+					"jsonFile" : "target-game-Debug-9ed9ec52e14eed13246f.json",
 					"name" : "game",
 					"projectIndex" : 1
 				},
 				{
 					"directoryIndex" : 2,
 					"id" : "swappywrapper::@7e25bd1f32ce224db4e9",
-					"jsonFile" : "target-swappywrapper-Debug-a8c459bbfdae72f39d08.json",
+					"jsonFile" : "target-swappywrapper-Debug-367409551aa9dc148709.json",
 					"name" : "swappywrapper",
 					"projectIndex" : 2
 				}
@@ -113,7 +113,7 @@
 	"paths" : 
 	{
 		"build" : "/home/j0pezz/Documents/GitHub/pong_clone/Ping Clone/.utmp/Debug/3m1a406a/arm64-v8a",
-		"source" : "/home/j0pezz/Documents/GitHub/pong_clone/Ping Clone/Library/PramData/AndroidApplicationController/Cache/com.BeginnerGames.PingClone/gradle-project/unityLibrary/src/main/cpp"
+		"source" : "/home/j0pezz/Documents/GitHub/pong_clone/Ping Clone/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/cpp"
 	},
 	"version" : 
 	{

@@ -1,6 +1,6 @@
-set(CMAKE_HOST_SYSTEM "Linux-7.1.3-zen1-1-zen")
+set(CMAKE_HOST_SYSTEM "Linux-7.1.5-zen1-1-zen")
 set(CMAKE_HOST_SYSTEM_NAME "Linux")
-set(CMAKE_HOST_SYSTEM_VERSION "7.1.3-zen1-1-zen")
+set(CMAKE_HOST_SYSTEM_VERSION "7.1.5-zen1-1-zen")
 set(CMAKE_HOST_SYSTEM_PROCESSOR "x86_64")
 
 include("/home/j0pezz/Unity/Hub/Editor/6000.3.19f1/Editor/Data/PlaybackEngines/AndroidPlayer/NDK/build/cmake/android.toolchain.cmake")

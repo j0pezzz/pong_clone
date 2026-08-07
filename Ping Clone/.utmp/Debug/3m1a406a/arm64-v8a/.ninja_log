@@ -1,23 +1,12 @@
 # ninja log v5
-5	1113	1784037618463230369	GameActivity/CMakeFiles/game.dir/UGAApplication.cpp.o	15bf2c0ba83e77c6
-8	190	1784037617547312129	FramePacing/CMakeFiles/swappywrapper.dir/UnitySwappyWrapper.cpp.o	ac0ff5dbe3d3476f
-1113	1150	1784037618505327347	/home/j0pezz/Documents/GitHub/pong_clone/Ping Clone/Library/PramData/AndroidApplicationController/Cache/com.BeginnerGames.PingClone/gradle-project/unityLibrary/build/intermediates/cxx/Debug/3m1a406a/obj/arm64-v8a/libgame.so	f511c2e64c38ffba
-6	959	1784037618310893599	GameActivity/CMakeFiles/game.dir/UGAInputKeyEvent.cpp.o	24b94ef4a9143219
-191	282	1784037617631313462	/home/j0pezz/Documents/GitHub/pong_clone/Ping Clone/Library/PramData/AndroidApplicationController/Cache/com.BeginnerGames.PingClone/gradle-project/unityLibrary/build/intermediates/cxx/Debug/3m1a406a/obj/arm64-v8a/libswappywrapper.so	74f1df49b7bc3dd1
-6	1037	1784037618386681000	GameActivity/CMakeFiles/game.dir/UGAInput.cpp.o	d6190f443daa3fb8
-6	873	1784037618223155644	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	b8573cba2eb6205
-6	890	1784037618241450931	GameActivity/CMakeFiles/game.dir/UGAEntry.cpp.o	a1bb5b9b39f739d
-6	1013	1784037618363806924	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	48c54ae619583f8c
-7	960	1784037618309029157	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	e1086af603c64064
-8	958	1784037618309743454	GameActivity/CMakeFiles/game.dir/UGASoftKeyboard.cpp.o	5a1fcbe6cb084b77
-9	188	1784111700750567549	FramePacing/CMakeFiles/swappywrapper.dir/UnitySwappyWrapper.cpp.o	ac0ff5dbe3d3476f
-188	309	1784111700862877253	/home/j0pezz/Documents/GitHub/pong_clone/Ping Clone/Library/PramData/AndroidApplicationController/Cache/com.BeginnerGames.PingClone/gradle-project/unityLibrary/build/intermediates/cxx/Debug/3m1a406a/obj/arm64-v8a/libswappywrapper.so	74f1df49b7bc3dd1
-7	1138	1784111701691915544	GameActivity/CMakeFiles/game.dir/UGAEntry.cpp.o	a1bb5b9b39f739d
-7	1156	1784111701708570715	GameActivity/CMakeFiles/game.dir/UGAInputKeyEvent.cpp.o	24b94ef4a9143219
-7	1193	1784111701748655507	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	e1086af603c64064
-6	1218	1784111701773852355	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	b8573cba2eb6205
-6	1222	1784111701778064285	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	48c54ae619583f8c
-7	1274	1784111701829537002	GameActivity/CMakeFiles/game.dir/UGASoftKeyboard.cpp.o	5a1fcbe6cb084b77
-7	1316	1784111701870709934	GameActivity/CMakeFiles/game.dir/UGAInput.cpp.o	d6190f443daa3fb8
-6	1408	1784111701962743814	GameActivity/CMakeFiles/game.dir/UGAApplication.cpp.o	15bf2c0ba83e77c6
-1408	1436	1784111702000929816	/home/j0pezz/Documents/GitHub/pong_clone/Ping Clone/Library/PramData/AndroidApplicationController/Cache/com.BeginnerGames.PingClone/gradle-project/unityLibrary/build/intermediates/cxx/Debug/3m1a406a/obj/arm64-v8a/libgame.so	f511c2e64c38ffba
+3	243	1785235576350957256	FramePacing/CMakeFiles/swappywrapper.dir/UnitySwappyWrapper.cpp.o	396d775ed5ce6513
+243	376	1785235576469959959	/home/j0pezz/Documents/GitHub/pong_clone/Ping Clone/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/Debug/3m1a406a/obj/arm64-v8a/libswappywrapper.so	e58123482c552e05
+0	1165	1785235577265320606	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	999e12edbdf786a2
+1	1208	1785235577306667888	GameActivity/CMakeFiles/game.dir/UGAEntry.cpp.o	3853b328ba3411f5
+2	1211	1785235577306654883	GameActivity/CMakeFiles/game.dir/UGAInputKeyEvent.cpp.o	b50b77d38df1b1a6
+0	1231	1785235577329389707	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	200a9e79231182cb
+2	1312	1785235577409316577	GameActivity/CMakeFiles/game.dir/UGASoftKeyboard.cpp.o	5c8c7208342b5253
+2	1328	1785235577430263086	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	a15409fcc7ae7c71
+1	1364	1785235577463899953	GameActivity/CMakeFiles/game.dir/UGAInput.cpp.o	fc245dedf708597e
+0	1408	1785235577508237420	GameActivity/CMakeFiles/game.dir/UGAApplication.cpp.o	9e8395b2385f3605
+1408	1446	1785235577554984599	/home/j0pezz/Documents/GitHub/pong_clone/Ping Clone/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/Debug/3m1a406a/obj/arm64-v8a/libgame.so	6f9150e2df204bcb

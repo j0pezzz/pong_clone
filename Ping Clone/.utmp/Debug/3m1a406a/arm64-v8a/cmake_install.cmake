@@ -1,4 +1,4 @@
-# Install script for directory: /home/j0pezz/Documents/GitHub/pong_clone/Ping Clone/Library/PramData/AndroidApplicationController/Cache/com.BeginnerGames.PingClone/gradle-project/unityLibrary/src/main/cpp
+# Install script for directory: /home/j0pezz/Documents/GitHub/pong_clone/Ping Clone/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/cpp
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

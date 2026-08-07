@@ -2,7 +2,7 @@
 	"artifacts" : 
 	[
 		{
-			"path" : "/home/j0pezz/Documents/GitHub/pong_clone/Ping Clone/Library/PramData/AndroidApplicationController/Cache/com.BeginnerGames.PingClone/gradle-project/unityLibrary/build/intermediates/cxx/Debug/3m1a406a/obj/arm64-v8a/libgame.so"
+			"path" : "/home/j0pezz/Documents/GitHub/pong_clone/Ping Clone/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/Debug/3m1a406a/obj/arm64-v8a/libgame.so"
 		}
 	],
 	"backtrace" : 1,
@@ -73,7 +73,7 @@
 			[
 				{
 					"backtrace" : 4,
-					"path" : "/home/j0pezz/Documents/GitHub/pong_clone/Ping Clone/Library/PramData/AndroidApplicationController/Cache/com.BeginnerGames.PingClone/gradle-project/unityLibrary/src/main/cpp/GameActivity"
+					"path" : "/home/j0pezz/Documents/GitHub/pong_clone/Ping Clone/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/cpp/GameActivity"
 				},
 				{
 					"backtrace" : 2,
